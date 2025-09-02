@@ -1,18 +1,18 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "drudge"
 version = "0.11.0"
 description = "A CAS based on sympy focusing on tensor and noncommutative algebras"
-requires-python = "==3.10.*"
+requires-python = "==3.9.*"
 dependencies = [
   "sympy==1.13.2",
   "jinja2",
   "pyspark>=3.5,<3.6",
-  "pytest",
-  "ipython>=8.0"
+  "ipython>=8.0",
+  "dummyrdd @ git+https://github.com/tschijnmo/DummyRDD.git@master"
 ]
 classifiers = [
   'Development Status :: 1 - Planning',
@@ -23,11 +23,15 @@ classifiers = [
   'Topic :: Scientific/Engineering :: Mathematics'
 ]
 readme = { file = "README.rst", content-type = "text/x-rst" }
-license = { file = "LICENSE" } 
+license = "MIT"
 authors = [
   { name = "Jinmo Zhao" },
   { name = "Gustavo E. Scuseria" }
 ]
+
+[project.optional-dependencies]
+docs = ["sphinx"]
+dev = ["pytest"]
 
 [project.urls]
 Homepage = "https://github.com/DrudgeCAS/drudge"
@@ -35,3 +39,9 @@ Homepage = "https://github.com/DrudgeCAS/drudge"
 [project.scripts]
 drudge = "drudge.drs:main"
 
+[tool.setuptools]
+license-files = ["LICENSE"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+drudge = ["templates/*", "*.h"]
