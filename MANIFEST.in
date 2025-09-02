@@ -2,3 +2,5 @@ recursive-include drudge *.h
 
 recursive-include deps/libcanon/include *.h
 
+recursive-include drudge/templates *
+
