@@ -79,6 +79,7 @@ celerybeat-schedule
 .env
 
 # virtualenv
+.venv/
 venv/
 ENV/
 
@@ -102,3 +103,10 @@ ENV/
 
 # For usage in dockerignore.
 .git
+
+# Editors
+.idea/
+.ycm_extra_conf.py
+
+# macOS cruft
+.DS_Store
