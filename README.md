@@ -16,17 +16,23 @@ combinatorial objects, such as strings and graphs, Drudge can find canonical
 forms for mathematical expressions involving tensors with symmetries and
 symbolic summations. For example, considering a fourth-order tensor $u$
 satisfying
+
 $$
 u_{abcd} = -u_{bacd} = -u_{abdc} = u_{badc},
 $$
+
 an expression like
+
 $$
 \sum_{cd} u_{acbd} \rho_{dc} - \sum_{cd} u_{cabd} \rho_{dc} + \sum_{cd} u_{cdbc} \rho_{cd}
 $$
+
 can be automatically simplified to a single term,
+
 $$
 3 \sum_{cd} u_{acbd} \rho_{dc},
 $$
+
 irrespective of the names and ordering of the summation indices.
 
 In addition to fully considering the permutational symmetries of tensors and
