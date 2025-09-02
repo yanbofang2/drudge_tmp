@@ -10,7 +10,9 @@ requires-python = "==3.10.*"
 dependencies = [
   "sympy==1.13.2",
   "jinja2",
-  "pyspark>=3.5,<3.6"
+  "pyspark>=3.5,<3.6",
+  "pytest",
+  "ipython>=8.0"
 ]
 classifiers = [
   'Development Status :: 1 - Planning',
@@ -25,12 +27,6 @@ license = { file = "LICENSE" }
 authors = [
   { name = "Jinmo Zhao" },
   { name = "Gustavo E. Scuseria" }
-]
-
-[project.optional-dependencies]
-dev = [
-  "pytest",
-  "ipython>=8.0",
 ]
 
 [project.urls]
