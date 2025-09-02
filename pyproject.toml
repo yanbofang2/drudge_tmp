@@ -22,7 +22,7 @@ classifiers = [
   'Programming Language :: Python :: Implementation :: CPython',
   'Topic :: Scientific/Engineering :: Mathematics'
 ]
-readme = { file = "README.rst", content-type = "text/x-rst" }
+readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
