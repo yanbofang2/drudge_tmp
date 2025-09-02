@@ -82,7 +82,7 @@ class DrsSymbol(_Definable, Symbol):
         In drudge scripts, all symbols are by itself indexed bases.
         """
         base = IndexedBase(self._orig)
-        if isinstance(indices, collections.Sequence):
+        if isinstance(indices, collections.abc.Sequence):
             return DrsIndexed(self._drudge, base, *indices)
         else:
             return DrsIndexed(self._drudge, base, indices)
