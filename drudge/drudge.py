@@ -1657,7 +1657,7 @@ class TensorDef(Tensor):
 
     .. math::
 
-        \sum_j o_{i, j} f_j
+        \\sum_j o_{i, j} f_j
 
     can be construed as a tensor.  By storing it as a :py:class:`Tensor`
     object, we can mathematically manipulate it.  With an explicit left-hand
@@ -1665,7 +1665,7 @@ class TensorDef(Tensor):
 
     .. math::
 
-        t_j = \sum_j o_{i, j} f_j
+        t_j = \\sum_j o_{i, j} f_j
 
     is now a tensor definition, which can be handled by the current class.
 
@@ -1673,7 +1673,7 @@ class TensorDef(Tensor):
     left-hand side, it can be convenient to be used for :py:meth:`Tensor.subst`
     or :py:meth:`Tensor.subst_all` method, or it can be directly indexed.  For
     example, with the above definition stored in ``t_def``, for tensor ``v``
-    holding :math:`\sum_j u_{i, j} t_j`,
+    holding :math:`\\sum_j u_{i, j} t_j`,
 
     ::
 
@@ -1691,7 +1691,7 @@ class TensorDef(Tensor):
 
     .. math::
 
-        \sum_{j, k} u_{i, j} o_{j, k} f_k
+        \\sum_{j, k} u_{i, j} o_{j, k} f_k
 
     Tensor definition can also be directly subscripts, like ``t_def[1]``
     gives :math:`sum_i o_{1, i} f_i`.
