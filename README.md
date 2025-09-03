@@ -1,7 +1,7 @@
 ![CircleCI](https://circleci.com/gh/DrudgeCAS/drudge.svg?style=shield)
 [![Coveralls](https://coveralls.io/repos/github/DrudgeCAS/drudge/badge.svg?branch=master)](https://coveralls.io/github/DrudgeCAS/drudge?branch=master)
 
-# Drudge
+<h1 align="center">Drudge</h1>
 
 Drudge is a symbolic algebra system built on top of
 [SymPy](http://www.sympy.org), focusing primarily on tensorial and
@@ -56,3 +56,16 @@ University, and was supported as part of the Center for the Computational
 Design of Functional Layered Materials, an Energy Frontier Research Center
 funded by the U.S. Department of Energy, Office of Science, Basic Energy
 Sciences under Award DE-SC0012575.
+
+## Installation
+
+Drudge can be installed directly from the GitHub repository using
+[uv](https://github.com/astral-sh/uv) (preferred)
+```bash
+uv pip install git+https://github.com/DrudgeCAS/drudge.git
+```
+or [pip](https://pypi.org/project/pip/)
+```bash
+pip install git+https://github.com/DrudgeCAS/drudge.git
+```
+
