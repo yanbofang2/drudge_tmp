@@ -209,17 +209,17 @@ def test_wigner3j_sum_to_wigner6j(nuclear: NuclearBogoliubovDrudge):
             ((-1) ** (j3 - m3) / (2 * j3 + 1))
             * KroneckerDelta(j3, jprm3) * KroneckerDelta(m3, mprm3)
             * Wigner6j(j1, j2, j3, j4, j5, j6)
-    ).expand().simplify()
+    ).expand().simplify(doit=False)
 
     # For performance reason, just test a random arrangement of the summations.
     random.shuffle(sums)
     tensor = dr.sum(*sums, phase * amp)
-    res = tensor.deep_simplify().merge()
+    res = tensor.deep_simplify(doit=False).merge()
     assert res.n_terms == 1
     term = res.local_terms[0]
     assert len(term.sums) == 0
     assert len(term.vecs) == 0
-    difference = (res - dr.sum(expected)).deep_simplify()
+    difference = (res - dr.sum(expected)).deep_simplify(doit=False)
     assert len(difference.local_terms) == 0
 
 
