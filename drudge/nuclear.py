@@ -11,6 +11,7 @@ from sympy import (
     sqrt, factor, Mul, Expr, Matrix, Pow
 )
 from sympy.physics.quantum.cg import CG, Wigner3j, Wigner6j, Wigner9j
+from sympy.concrete.summations import eval_sum_symbolic
 
 from .drudge import Tensor
 from .fock import BogoliubovDrudge
@@ -184,6 +185,9 @@ class NuclearBogoliubovDrudge(BogoliubovDrudge):
             CG=CG, Wigner3j=Wigner3j, Wigner6j=Wigner6j, Wigner9j=Wigner9j
         )
 
+        self.sum_simplifiers = BCastVar(self._ctx, {
+            1: [_simplify_symbolic_sum_nodoit]
+        })
         self._am_sum_simplifiers = BCastVar(self.ctx, {
             # TODO: Add more simplifications here.
             2: [_sum_2_3j_to_delta],
@@ -1643,4 +1647,15 @@ def _simpl_varsh_911_8(expr: Sum):
         match[j], match[j_prm]
     ) * KroneckerDelta(match[m], match[m_prm]) * Wigner6j(
         match[j1], match[j2], match[j12], match[j3], match[j], match[j23]
+    )
+
+
+def _simplify_symbolic_sum_nodoit(expr, **_):
+    """Try to simplify a symbolic summation of one dummy with `doit=False`.
+    """
+
+    assert len(expr.args) == 2
+
+    return eval_sum_symbolic(
+        expr.args[0].simplify(doit=False), expr.args[1]
     )
