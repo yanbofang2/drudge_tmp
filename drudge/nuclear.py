@@ -423,7 +423,7 @@ class NuclearBogoliubovDrudge(BogoliubovDrudge):
         )
 
     @staticmethod
-    def deep_simplify(tensor: Tensor):
+    def deep_simplify(tensor: Tensor, **kwargs):
         """Simplify the given tensor deeply.
 
         This driver function attempts to perform simplifications relevant to
@@ -434,13 +434,13 @@ class NuclearBogoliubovDrudge(BogoliubovDrudge):
         """
 
         # Initial simplification.
-        res = tensor.simplify()
+        res = tensor.simplify(**kwargs)
         # This can possibly reduce the number of terms.
         res = res.merge_j()
         res = res.simplify_am()
 
         # Final trial.
-        res = res.simplify().merge_j()
+        res = res.simplify(**kwargs).merge_j()
 
         return res
 

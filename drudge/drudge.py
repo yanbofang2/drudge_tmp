@@ -435,7 +435,7 @@ class Tensor:
         )
         return res_terms
 
-    def simplify_amps(self):
+    def simplify_amps(self, **kwargs):
         """Simplify the amplitudes in the tensor.
 
         This method simplifies the amplitude in the terms of the tensor by using
@@ -445,15 +445,19 @@ class Tensor:
 
         # Some free variables might be canceled.
         return self.apply(
-            self._simplify_amps, free_vars=None, repartitioned=False
+            functools.partial(
+                self._simplify_amps, **kwargs
+            ),
+            free_vars=None, repartitioned=False
         )
 
     @staticmethod
-    def _simplify_amps(terms):
+    def _simplify_amps(terms, **kwargs):
         """Get the terms with amplitude simplified by SymPy."""
 
         simplified_terms = terms.map(
-            lambda term: term.map(lambda x: x.simplify(), skip_vecs=True)
+            lambda term: term.map(lambda x: x.simplify(**kwargs),
+                                  skip_vecs=True)
         ).filter(_is_nonzero)
 
         return simplified_terms
@@ -694,7 +698,7 @@ class Tensor:
     # The driver simplification.
     #
 
-    def simplify(self):
+    def simplify(self, **kwargs):
         """Simplify the tensor.
 
         This is the master driver function for tensor simplification.  Inside
@@ -705,7 +709,7 @@ class Tensor:
         """
 
         result = Tensor(
-            self._drudge, self._simplify(self._terms), expanded=True
+            self._drudge, self._simplify(self._terms, **kwargs), expanded=True
         )
 
         if self._drudge.inside_drs:
@@ -714,7 +718,7 @@ class Tensor:
 
         return result
 
-    def _simplify(self, terms):
+    def _simplify(self, terms, **kwargs):
         """Get the terms in the simplified form."""
 
         num_partitions = self._drudge.num_partitions
@@ -733,9 +737,9 @@ class Tensor:
             terms = terms.repartition(num_partitions)
 
         # Simplify the amplitude part.
-        terms = self._simplify_amps(terms)
+        terms = self._simplify_amps(terms, **kwargs)
         terms = self._simplify_sums(terms)
-        terms = self._simplify_amps(terms)
+        terms = self._simplify_amps(terms, **kwargs)
         terms = self._simplify_deltas(terms, False)
 
         # Canonicalize the terms and see if they can be merged.
@@ -750,7 +754,7 @@ class Tensor:
 
         # Finally simplify the merged amplitude again.
         if self._drudge.full_simplify:
-            terms = self._simplify_amps(terms)
+            terms = self._simplify_amps(terms, **kwargs)
 
         # Make the final expansion.
         terms = self._expand(terms)
