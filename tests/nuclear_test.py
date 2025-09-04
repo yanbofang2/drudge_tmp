@@ -133,7 +133,7 @@ def test_varsh_872_5(nuclear: NuclearBogoliubovDrudge):
     )
     for sums_i in [sums, reversed(sums)]:
         tensor = dr.sum(*sums_i, amp)
-        res = tensor.simplify_am().merge() #previously used deep_simplify
+        res = tensor.deep_simplify().merge()
         assert res.n_terms == 1
         term = res.local_terms[0]
         assert len(term.sums) == 0
