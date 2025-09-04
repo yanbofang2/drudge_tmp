@@ -214,12 +214,12 @@ def test_wigner3j_sum_to_wigner6j(nuclear: NuclearBogoliubovDrudge):
     # For performance reason, just test a random arrangement of the summations.
     random.shuffle(sums)
     tensor = dr.sum(*sums, phase * amp)
-    res = tensor.deep_simplify(doit=False).merge()
+    res = tensor.deep_simplify().merge()
     assert res.n_terms == 1
     term = res.local_terms[0]
     assert len(term.sums) == 0
     assert len(term.vecs) == 0
-    difference = (res - dr.sum(expected)).deep_simplify(doit=False)
+    difference = (res - dr.sum(expected)).deep_simplify()
     assert len(difference.local_terms) == 0
 
 
