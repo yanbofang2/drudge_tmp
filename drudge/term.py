@@ -1839,21 +1839,21 @@ def proc_delta(arg1, arg2, sums_dict, resolvers):
         else:
             return _NAUGHT, None
 
-    eqn = Eq(arg1, arg2).simplify()
+    eqn = Eq(arg1.simplify(), arg2.simplify())
 
     # We try to solve for each of the dummies.  Most likely this will only be
     # executed for one loop.
 
     for dumm in dumms:
         range_ = sums_dict[dumm]
-        # Here we assume the same integral domain, since dummies are summed over
-        # and we can mostly assume that they are integral.
+        # Here we assume the integer domain, since dummies are summed over
+        # and we can mostly assume that they are integers.
         #
         # TODO: infer actual domain from the range.
         domain = S.Integers
         sol = solveset(eqn, dumm, domain)
 
-        # Strip off trivial intersecting with the domain.
+        # Strip off trivial intersecting with the domain (intergers).
         if isinstance(sol, Intersection) and len(sol.args) == 2:
             if sol.args[0] == domain:
                 sol = sol.args[1]
