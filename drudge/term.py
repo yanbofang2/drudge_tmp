@@ -1853,7 +1853,7 @@ def proc_delta(arg1, arg2, sums_dict, resolvers):
         domain = S.Integers
         sol = solveset(eqn, dumm, domain)
 
-        # Strip off trivial intersecting with the domain (intergers).
+        # Strip off trivial intersecting with the domain (integers).
         if isinstance(sol, Intersection) and len(sol.args) == 2:
             if sol.args[0] == domain:
                 sol = sol.args[1]
