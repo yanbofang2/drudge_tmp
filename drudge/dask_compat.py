@@ -95,10 +95,10 @@ class DaskBag:
         
         return DaskBag(grouped.map(reduce_group).filter(lambda x: x is not None))
     
-    def union(self, other_bags: List['DaskBag']) -> 'DaskBag':
+    def union(self, *other_bags) -> 'DaskBag':
         """Union with other bags."""
-        bags = [self._bag] + [bag._bag for bag in other_bags]
-        return DaskBag(db.concat(bags))
+        all_bags = [self._bag] + [bag._bag if hasattr(bag, '_bag') else bag for bag in other_bags]
+        return DaskBag(db.concat(all_bags))
 
 
 class DaskContext:
@@ -141,12 +141,27 @@ class DaskContext:
         """Create a broadcast variable."""
         return DaskBroadcast(self._client, value)
     
-    def union(self, bags: List[DaskBag]) -> DaskBag:
+    def union(self, *bags) -> DaskBag:
         """Union multiple bags."""
         if not bags:
             return DaskBag(db.from_sequence([]))
         
-        dask_bags = [bag._bag for bag in bags]
+        # Handle both list of bags and individual bags as arguments
+        if len(bags) == 1 and hasattr(bags[0], '__iter__') and not hasattr(bags[0], '_bag'):
+            # Single argument that's a list of bags
+            bags = bags[0]
+        
+        dask_bags = []
+        for bag in bags:
+            if hasattr(bag, '_bag'):
+                dask_bags.append(bag._bag)
+            else:
+                # Assume it's already a dask bag
+                dask_bags.append(bag)
+        
+        if not dask_bags:
+            return DaskBag(db.from_sequence([]))
+            
         return DaskBag(db.concat(dask_bags))
 
 
