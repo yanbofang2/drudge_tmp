@@ -13,7 +13,7 @@ import warnings
 from collections.abc import Iterable, Sequence
 
 from IPython.display import Math, display
-from pyspark import RDD, SparkContext
+from .dask_compat import DaskBag, DaskContext
 from sympy import (
     IndexedBase, Symbol, Indexed, Wild, symbols, sympify, Expr, Add, Matrix, Mul
 )
@@ -39,7 +39,7 @@ _DECR_SUFFIX = '_InternalProxy'
 class Tensor:
     """The main tensor class.
 
-    A tensor is an aggregate of terms distributed and managed by Spark.  Here
+    A tensor is an aggregate of terms distributed and managed by Dask.  Here
     most operations needed for tensors are defined.
 
     Normally, tensor instances are created from drudge methods or tensor
@@ -60,7 +60,7 @@ class Tensor:
     # Term creation
     #
 
-    def __init__(self, drudge: 'Drudge', terms: RDD,
+    def __init__(self, drudge: 'Drudge', terms: DaskBag,
                  free_vars: typing.Set[Symbol] = None,
                  expanded=False, repartitioned=False):
         """Initialize the tensor.
@@ -101,7 +101,7 @@ class Tensor:
 
     @property
     def terms(self):
-        """The terms in the tensor, as an RDD object.
+        """The terms in the tensor, as a DaskBag object.
 
         Although for users, normally there is no need for direct manipulation of
         the terms, it is still exposed here for flexibility.
@@ -152,10 +152,10 @@ class Tensor:
         return self
 
     def repartition(self, num_partitions=None, cache=False):
-        """Repartition the terms across the Spark cluster.
+        """Repartition the terms across the Dask cluster.
 
         This function should be called when the terms need to be rebalanced
-        among the workers.  Note that this incurs an Spark RDD shuffle operation
+        among the workers.  Note that this incurs a Dask bag repartition operation
         and might be very expensive.  Its invocation and the number of
         partitions used need to be fine-tuned for different problems to achieve
         good performance.
@@ -198,7 +198,7 @@ class Tensor:
 
         self.cache()
 
-        # Work around a pyspark bug by doing the reduction locally.
+        # Work around a dask issue by doing the reduction locally.
         return all(
             self._terms.map(lambda x: x.is_scalar).collect()
         )
@@ -1974,18 +1974,18 @@ class Drudge:
 
     # We do not need slots here.  There is generally only one drudge instance.
 
-    def __init__(self, ctx: SparkContext, num_partitions=True):
+    def __init__(self, ctx: DaskContext, num_partitions=True):
         """Initialize the drudge.
 
         Parameters
         ----------
 
         ctx
-            The Spark context to be used.
+            The Dask context to be used.
 
         num_partitions
             The preferred number of partitions.  By default, it is the default
-            parallelism of the given Spark environment.  Or an explicit integral
+            parallelism of the given Dask environment.  Or an explicit integral
             value can be given.  It can be set to None, which disable all
             explicit load-balancing by shuffling.
 
@@ -2027,7 +2027,7 @@ class Drudge:
 
     @property
     def ctx(self):
-        """The Spark context of the drudge.
+        """The Dask context of the drudge.
         """
         return self._ctx
 

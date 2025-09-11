@@ -3,12 +3,12 @@
 from drudge import CliffordDrudge, Vec, inner_by_delta
 
 
-def test_clifford_drudge_by_quaternions(spark_ctx):
+def test_clifford_drudge_by_quaternions(dask_ctx):
     """Test basic functionality of Clifford drudge by quaternions.
     """
 
     dr = CliffordDrudge(
-        spark_ctx, inner=lambda v1, v2: -inner_by_delta(v1, v2)
+        dask_ctx, inner=lambda v1, v2: -inner_by_delta(v1, v2)
     )
     e_ = Vec('e')
 
