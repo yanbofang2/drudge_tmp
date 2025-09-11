@@ -6,7 +6,7 @@ import string
 import time
 from collections.abc import Sequence
 
-from pyspark import RDD, SparkContext
+from .dask_compat import DaskBag as RDD, DaskContext as SparkContext
 from sympy import (
     sympify, Symbol, Expr, SympifyError, count_ops, default_sort_key,
     AtomicExpr, Integer, S
@@ -244,8 +244,8 @@ class EnumSymbs(AtomicExpr, metaclass=_EnumSymbsMeta):
 
 
 #
-# Spark utilities
-# ---------------
+# Dask utilities
+# --------------
 #
 
 
@@ -253,7 +253,7 @@ class BCastVar:
     """Automatically broadcast variables.
 
     This class is a shallow encapsulation of a variable and its broadcast
-    into the spark context.  The variable can be redistributed automatically
+    into the dask context.  The variable can be redistributed automatically
     after any change.
 
     """
@@ -291,6 +291,13 @@ class BCastVar:
         if self._bcast is None:
             self._bcast = self._ctx.broadcast(self._var)
         return self._bcast
+
+    @property
+    def value(self):
+        """Get the broadcast value (for Dask compatibility)."""
+        if self._bcast is None:
+            self._bcast = self._ctx.broadcast(self._var)
+        return self._bcast.value
 
 
 def nest_bind(rdd: RDD, func, full_balance=True):

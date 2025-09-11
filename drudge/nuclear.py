@@ -358,7 +358,7 @@ class NuclearBogoliubovDrudge(BogoliubovDrudge):
 
         substed = tensor.subst_all(defs)
 
-        # Cache as locals for Spark serialization.
+        # Cache as locals for Dask serialization.
         tilde_range = self.tilde_range
         form_tilde = self.form_tilde
         m_range = self.m_range

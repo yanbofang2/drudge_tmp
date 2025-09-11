@@ -8,16 +8,15 @@ IF_DUMMY_SPARK = 'DUMMY_SPARK' in os.environ
 
 @pytest.fixture(scope='session', autouse=True)
 def spark_ctx():
-    """A simple spark context."""
+    """A simple dask context (renamed for compatibility)."""
 
     if IF_DUMMY_SPARK:
         from dummy_spark import SparkConf, SparkContext
         conf = SparkConf()
         ctx = SparkContext(master='', conf=conf)
     else:
-        from pyspark import SparkConf, SparkContext
-        conf = SparkConf().setMaster('local[2]').setAppName('drudge-unittest')
-        ctx = SparkContext(conf=conf)
+        from drudge.dask_compat import DaskContext
+        ctx = DaskContext()
 
     return ctx
 

@@ -13,7 +13,7 @@ import warnings
 from collections.abc import Iterable, Sequence
 
 from IPython.display import Math, display
-from pyspark import RDD, SparkContext
+from .dask_compat import DaskBag as RDD, DaskContext as SparkContext
 from sympy import (
     IndexedBase, Symbol, Indexed, Wild, symbols, sympify, Expr, Add, Matrix, Mul
 )
@@ -39,7 +39,7 @@ _DECR_SUFFIX = '_InternalProxy'
 class Tensor:
     """The main tensor class.
 
-    A tensor is an aggregate of terms distributed and managed by Spark.  Here
+    A tensor is an aggregate of terms distributed and managed by Dask.  Here
     most operations needed for tensors are defined.
 
     Normally, tensor instances are created from drudge methods or tensor
@@ -152,10 +152,10 @@ class Tensor:
         return self
 
     def repartition(self, num_partitions=None, cache=False):
-        """Repartition the terms across the Spark cluster.
+        """Repartition the terms across the Dask cluster.
 
         This function should be called when the terms need to be rebalanced
-        among the workers.  Note that this incurs an Spark RDD shuffle operation
+        among the workers.  Note that this incurs a Dask bag repartition operation
         and might be very expensive.  Its invocation and the number of
         partitions used need to be fine-tuned for different problems to achieve
         good performance.
@@ -198,7 +198,7 @@ class Tensor:
 
         self.cache()
 
-        # Work around a pyspark bug by doing the reduction locally.
+        # Collect all scalar checks locally.
         return all(
             self._terms.map(lambda x: x.is_scalar).collect()
         )
@@ -250,7 +250,7 @@ class Tensor:
         # A tensor is barely needed by a has_base decision only.
         self.cache()
 
-        # Work around a possible pyspark bug in reduce.
+        # Use collect for local reduction.
         return any(
             self._terms.map(functools.partial(Term.has_base, base=base))
                 .collect()
@@ -506,7 +506,7 @@ class Tensor:
         simplifiers
 
             The rules to simplify the internally summed factors of the
-            amplitude.  It should be a Spark broadcast of a mapping from the
+            amplitude.  It should be a Dask broadcast of a mapping from the
             number of summations indices able to be handled to an iterable of
             functions implementing the rules.
 
@@ -703,8 +703,8 @@ class Tensor:
 
         This is the master driver function for tensor simplification.  Inside
         drudge scripts, it also make eager evaluation and repartition the terms
-        among the Spark workers, with the result cached.  This is for the ease
-        of users unfamiliar with the Spark lazy execution model.
+        among the Dask workers, with the result cached.  This is for the ease
+        of users unfamiliar with the Dask lazy execution model.
 
         """
 
@@ -1066,7 +1066,7 @@ class Tensor:
 
         .. doctest::
 
-            >>> dr = Drudge(SparkContext())
+            >>> dr = Drudge(DaskContext())
             >>> r = Range('R')
             >>> a, b = dr.set_dumms(r, symbols('a b c d e f'))[:2]
             >>> dr.add_default_resolver(r)
@@ -1981,11 +1981,11 @@ class Drudge:
         ----------
 
         ctx
-            The Spark context to be used.
+            The Dask context to be used.
 
         num_partitions
             The preferred number of partitions.  By default, it is the default
-            parallelism of the given Spark environment.  Or an explicit integral
+            parallelism of the given Dask environment.  Or an explicit integral
             value can be given.  It can be set to None, which disable all
             explicit load-balancing by shuffling.
 
@@ -2027,7 +2027,7 @@ class Drudge:
 
     @property
     def ctx(self):
-        """The Spark context of the drudge.
+        """The Dask context of the drudge.
         """
         return self._ctx
 

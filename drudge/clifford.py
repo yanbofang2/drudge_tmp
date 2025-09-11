@@ -5,7 +5,7 @@ import itertools
 import operator
 import typing
 
-from pyspark import RDD
+from .dask_compat import DaskBag as RDD
 from sympy import Expr, Integer, KroneckerDelta
 
 from .term import Vec, Term

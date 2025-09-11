@@ -8,7 +8,7 @@ import abc
 import functools
 import typing
 
-from pyspark import RDD
+from .dask_compat import DaskBag as RDD
 from sympy import Expr
 
 from .drudge import Drudge
@@ -147,7 +147,7 @@ class WickDrudge(Drudge, abc.ABC):
             # This level of parallelism is reserved for really hard problems.
             expanded = []
             for term, contrs, schemes in wick_terms.collect():
-                # To work around a probable Spark bug.  Problem occurs when we
+                # To work around serialization issues.  Problem occurs when we
                 # have closures inside a loop to be distributed out.
                 form_term = functools.partial(
                     _form_term_from_wick_bcast, term, contrs, phase, resolvers
@@ -365,7 +365,7 @@ def _form_term_from_wick(term, contrs, phase, resolvers, wick_scheme):
 def _form_term_from_wick_bcast(term, contrs, phase, resolvers, wick_scheme):
     """Form term from Wick scheme with broadcast resolvers.
 
-    This function is to work around a probable Spark bug on serializing closures
+    This function is to work around serialization issues with closures
     inside loop.
     """
     return _form_term_from_wick(

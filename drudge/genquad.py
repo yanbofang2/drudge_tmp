@@ -7,7 +7,7 @@ import itertools
 import operator
 import typing
 
-from pyspark import RDD
+from .dask_compat import DaskBag as RDD
 from sympy import sympify, Expr, Integer, KroneckerDelta, SympifyError
 
 from .drudge import Drudge

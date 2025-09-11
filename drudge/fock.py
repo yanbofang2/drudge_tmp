@@ -9,7 +9,7 @@ import functools
 import typing
 import warnings
 
-from pyspark import RDD
+from .dask_compat import DaskBag as RDD
 from sympy import (
     KroneckerDelta, IndexedBase, Expr, Symbol, Rational, symbols, conjugate,
     factorial
