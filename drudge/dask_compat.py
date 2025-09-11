@@ -10,8 +10,17 @@ from typing import Any, Callable, Iterable, List, Optional, Union
 try:
     import dask
     import dask.bag as db
-    from dask.distributed import Client, Variable
+    HAS_DASK = True
 except ImportError:
+    HAS_DASK = False
+
+try:
+    from dask.distributed import Client, Variable
+    HAS_DISTRIBUTED = True
+except ImportError:
+    HAS_DISTRIBUTED = False
+
+if not HAS_DASK:
     raise ImportError(
         "Dask is required for this functionality. "
         "Please install dask with: pip install 'dask[bag]'"
@@ -46,6 +55,10 @@ class DaskBag:
         """Collect all elements to the driver."""
         return self._bag.compute()
 
+    def compute(self) -> List[Any]:
+        """Compute all elements (Dask native method)."""
+        return self._bag.compute()
+
     def count(self) -> int:
         """Count the number of elements."""
         return self._bag.count().compute()
@@ -59,9 +72,41 @@ class DaskBag:
         """Repartition the bag."""
         return DaskBag(self._bag.repartition(npartitions=num_partitions))
 
+    def reduceByKey(self, func: Callable) -> 'DaskBag':
+        """Reduce by key operation (assumes elements are (key, value) pairs)."""
+        # Group by key and then reduce values for each key
+        grouped = self._bag.groupby(lambda x: x[0])
+        
+        def reduce_values(key_and_values):
+            key, values = key_and_values
+            values_list = list(values)
+            if len(values_list) == 0:
+                return None
+            elif len(values_list) == 1:
+                return values_list[0]
+            else:
+                # Extract values (second element of each pair)
+                vals = [v[1] for v in values_list]
+                result = vals[0]
+                for val in vals[1:]:
+                    result = func(result, val)
+                return (key, result)
+        
+        reduced = grouped.map(reduce_values).filter(lambda x: x is not None)
+        return DaskBag(reduced)
+
     def reduce(self, func: Callable) -> Any:
         """Reduce the bag using the given function."""
-        return self._bag.reduce(func)
+        # For compatibility with Spark RDD.reduce(), we need to implement
+        # a true reduce operation. Dask doesn't have this directly.
+        items = self._bag.compute()
+        if not items:
+            raise ValueError("Cannot reduce empty bag")
+        
+        result = items[0]
+        for item in items[1:]:
+            result = func(result, item)
+        return result
 
     @property
     def context(self) -> 'DaskContext':
@@ -74,22 +119,33 @@ class DaskContext:
 
     _current_context = None
 
-    def __init__(self, client: Optional[Client] = None):
+    def __init__(self, client: Optional['Client'] = None):
         """Initialize the Dask context."""
-        if client is None:
+        if HAS_DISTRIBUTED and client is None:
             # Try to get existing client or create a new one
             try:
                 client = Client.current()
-            except ValueError:
+            except (ValueError, ImportError):
                 # No client exists, create a new one
-                client = Client(processes=False, silence_logs=False)
+                try:
+                    client = Client(processes=False, silence_logs=False)
+                except Exception:
+                    # If we can't create a distributed client, use synchronous mode
+                    client = None
         
         self._client = client
-        self._default_parallelism = self._client.ncores()
+        # For basic bag operations, we don't need distributed
+        # Set a reasonable default parallelism
+        if self._client and hasattr(self._client, 'ncores'):
+            self._default_parallelism = self._client.ncores()
+        else:
+            # Use number of CPU cores as default
+            import os
+            self._default_parallelism = os.cpu_count() or 4
         DaskContext._current_context = self
 
     @property
-    def client(self) -> Client:
+    def client(self) -> Optional['Client']:
         """Get the Dask client."""
         return self._client
 
@@ -128,7 +184,7 @@ class DaskContext:
 
     def stop(self):
         """Stop the context."""
-        if self._client:
+        if self._client and hasattr(self._client, 'close'):
             self._client.close()
         DaskContext._current_context = None
 
@@ -136,7 +192,7 @@ class DaskContext:
 class DaskBroadcast:
     """Dask broadcast variable that mimics Spark broadcast."""
 
-    def __init__(self, value: Any, client: Client):
+    def __init__(self, value: Any, client: Optional['Client']):
         """Initialize the broadcast variable."""
         self._value = value
         self._client = client
