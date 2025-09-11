@@ -72,6 +72,21 @@ class DaskBag:
         """Repartition the bag."""
         return DaskBag(self._bag.repartition(npartitions=num_partitions))
 
+    def aggregate(self, zero_value: Any, seq_func: Callable, comb_func: Callable) -> Any:
+        """Aggregate operation (like Spark's aggregate)."""
+        # In Spark, aggregate combines elements of each partition using seq_func,
+        # then combines the results using comb_func
+        items = self._bag.compute()
+        if not items:
+            return zero_value
+        
+        # Apply seq_func to combine elements
+        result = zero_value
+        for item in items:
+            result = seq_func(result, item)
+        
+        return result
+
     def reduceByKey(self, func: Callable) -> 'DaskBag':
         """Reduce by key operation (assumes elements are (key, value) pairs)."""
         # Group by key and then reduce values for each key
