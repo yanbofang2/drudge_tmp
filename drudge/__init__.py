@@ -20,7 +20,7 @@ from .clifford import CliffordDrudge, inner_by_delta
 from .bcs import ReducedBCSDrudge
 from .nuclear import NuclearBogoliubovDrudge
 from .report import Report, ScalarLatexPrinter
-from .utils import sum_, prod_, Stopwatch, CallByIndex, InvariantIndexable
+from .dask_compat import DaskContext
 
 __version__ = '0.10.0dev0'
 
@@ -76,5 +76,8 @@ __all__ = [
     'CallByIndex',
     'InvariantIndexable',
     'Report',
-    'ScalarLatexPrinter'
+    'ScalarLatexPrinter',
+    
+    # Dask support.
+    'DaskContext'
 ]

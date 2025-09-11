@@ -73,17 +73,27 @@ class DaskBag:
     
     def reduceByKey(self, func: Callable) -> 'DaskBag':
         """Reduce by key operation - similar to Spark's reduceByKey."""
-        # Group by key, then reduce values for each key
-        def reduce_group(key_values):
-            key, values = key_values
-            if len(values) == 1:
-                return (key, values[0])
-            result = values[0]
-            for value in values[1:]:
-                result = func(result, value)
+        # Group by key, then reduce values for each key using fold
+        def get_key(item):
+            return item[0]
+        
+        def get_value(item):
+            return item[1]
+        
+        # Group by key and reduce each group
+        grouped = self._bag.groupby(get_key)
+        
+        def reduce_group(group_item):
+            key, values = group_item
+            values_list = list(values)
+            if not values_list:
+                return None
+            result = get_value(values_list[0])
+            for item in values_list[1:]:
+                result = func(result, get_value(item))
             return (key, result)
         
-        return DaskBag(self._bag.groupby(lambda x: x[0]).map(reduce_group))
+        return DaskBag(grouped.map(reduce_group).filter(lambda x: x is not None))
     
     def union(self, other_bags: List['DaskBag']) -> 'DaskBag':
         """Union with other bags."""

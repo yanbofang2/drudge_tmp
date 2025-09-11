@@ -222,7 +222,7 @@ class Tensor:
         return terms.map(
             lambda term: term.free_vars
         ).aggregate(set(), _union, _union)
-        # TODO: investigate performance characteristic with treeAggregate.
+        # TODO: investigate performance characteristic with tree reduction.
 
     @property
     def expanded(self):
@@ -250,7 +250,7 @@ class Tensor:
         # A tensor is barely needed by a has_base decision only.
         self.cache()
 
-        # Work around a possible pyspark bug in reduce.
+        # Work around a possible dask issue in reduce.
         return any(
             self._terms.map(functools.partial(Term.has_base, base=base))
                 .collect()
@@ -358,7 +358,7 @@ class Tensor:
     #
 
     def apply(self, func, **kwargs):
-        """Apply the given function to the RDD of terms.
+        """Apply the given function to the DaskBag of terms.
 
         This function is analogous to the replace function of Python named
         tuples, the same value from self for the tensor initializer is going to
@@ -392,7 +392,7 @@ class Tensor:
     #
     # Here for a lot of methods, we have two versions, with one being public,
     # another being private with a leading underscore.  The private version
-    # operates on given RDD of terms and returns another RDD of terms.  The
+    # operates on given DaskBag of terms and returns another DaskBag of terms.  The
     # public version operates on the terms of the current tensor, and return
     # another tensor.
     #
@@ -422,7 +422,7 @@ class Tensor:
 
         return self.apply(functools.partial(self._reset_dumms, excl=excl))
 
-    def _reset_dumms(self, terms: RDD, excl) -> RDD:
+    def _reset_dumms(self, terms: DaskBag, excl) -> DaskBag:
         """Get terms with dummies reset.
 
         Note that this function does not automatically add the free variables in
@@ -541,7 +541,7 @@ class Tensor:
         ))
 
     def _simplify_sums(
-            self, terms: RDD, simplifiers=True, excl_bases=True
+            self, terms: DaskBag, simplifiers=True, excl_bases=True
     ):
         """Simplify the summations in the given terms."""
 
@@ -605,7 +605,7 @@ class Tensor:
         return self.apply(self._sort)
 
     @staticmethod
-    def _sort(terms: RDD):
+    def _sort(terms: DaskBag):
         """Sort the terms in the tensor."""
         return terms.sortBy(lambda term: term.sort_key)
 
@@ -1066,7 +1066,7 @@ class Tensor:
 
         .. doctest::
 
-            >>> dr = Drudge(SparkContext())
+            >>> dr = Drudge(DaskContext())
             >>> r = Range('R')
             >>> a, b = dr.set_dumms(r, symbols('a b c d e f'))[:2]
             >>> dr.add_default_resolver(r)
@@ -2467,13 +2467,13 @@ class Drudge:
     def normal_order(self, terms, **kwargs):
         """Normal order the terms in the given tensor.
 
-        This method should be called with the RDD of some terms, and another RDD
+        This method should be called with the DaskBag of some terms, and another DaskBag
         of terms, where all the vector parts are normal ordered according to
         domain-specific rules, should be returned.
 
         By default, we work for the free algebra.  So nothing is done by this
         function.  For noncommutative algebraic system, this function needs to
-        be overridden to return an RDD for the normal-ordered terms from the
+        be overridden to return a DaskBag for the normal-ordered terms from the
         given terms.
         """
 
@@ -2523,7 +2523,7 @@ class Drudge:
 
         .. doctest::
 
-            >>> dr = Drudge(SparkContext())
+            >>> dr = Drudge(DaskContext())
             >>> r = Range('R')
             >>> a = Symbol('a')
             >>> b = Symbol('b')
@@ -2618,7 +2618,7 @@ class Drudge:
 
         .. doctest::
 
-            >>> dr = Drudge(SparkContext())
+            >>> dr = Drudge(DaskContext())
             >>> r = Range('R')
             >>> a, b, c = dr.set_dumms(r, symbols('a b c'))
             >>> dr.add_resolver_for_dumms()
@@ -3084,7 +3084,7 @@ class Drudge:
         .. doctest::
             :options: +SKIP
 
-            >>> dr = Drudge(SparkContext())
+            >>> dr = Drudge(DaskContext())
             >>> tensor = dr.sum(IndexedBase('x')[Symbol('a')])
             >>> with dr.report('report.html', 'A simple tensor') as report:
             ...     report.add('Simple tensor', tensor)
@@ -3124,7 +3124,7 @@ class Drudge:
 
         .. doctest::
 
-            >>> dr = Drudge(SparkContext())
+            >>> dr = Drudge(DaskContext())
             >>> tensor = dr.sum(IndexedBase('x')[Symbol('a')])
             >>> import pickle
             >>> serialized = pickle.dumps(tensor)
@@ -3185,7 +3185,7 @@ class Drudge:
         .. doctest::
             :options: +SKIP
 
-            >>> dr = Drudge(SparkContext())
+            >>> dr = Drudge(DaskContext())
             >>> res = dr.memoize(lambda: 10, 'intermediate.pickle')
             >>> res
             10
