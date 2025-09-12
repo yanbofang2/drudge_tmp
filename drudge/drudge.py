@@ -220,7 +220,7 @@ class Tensor:
         terms.cache()
 
         return terms.map(
-            lambda term: term.free_vars
+            lambda term: set(term.free_vars) if hasattr(term.free_vars, '__iter__') else set()
         ).aggregate(set(), _union, _union)
         # TODO: investigate performance characteristic with tree reduction.
 
@@ -430,8 +430,10 @@ class Tensor:
         """
 
         dumms = self._drudge.dumms
+        dumms_value = dumms.value
+        
         res_terms = terms.map(
-            lambda term: term.reset_dumms(dumms=dumms.value, excl=excl)[0]
+            functools.partial(_reset_dumms_helper, dumms=dumms_value, excl=excl)
         )
         return res_terms
 
@@ -3487,10 +3489,38 @@ current_drudge = None
 #
 
 
+def _reset_dumms_helper(term, dumms, excl):
+    """Helper function for resetting dummies in a term."""
+    return term.reset_dumms(dumms=dumms, excl=excl)[0]
+
+
 def _union(orig, new):
     """Union the two sets and return the first."""
-    orig |= new
-    return orig
+    # Handle case where the function itself is passed as orig (Dask compatibility issue)
+    if callable(orig):
+        if isinstance(new, set):
+            return new
+        else:
+            return set()
+    
+    if callable(new):
+        if isinstance(orig, set):
+            return orig
+        else:
+            return set()
+    
+    # Normal case: both are sets
+    if isinstance(orig, set) and isinstance(new, set):
+        orig |= new
+        return orig
+    
+    # Fallback: ensure we return a set
+    result = set()
+    if hasattr(orig, '__iter__') and not isinstance(orig, str):
+        result.update(orig)
+    if hasattr(new, '__iter__') and not isinstance(new, str):
+        result.update(new)
+    return result
 
 
 def _inters(orig, new):
