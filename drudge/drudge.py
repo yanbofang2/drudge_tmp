@@ -220,7 +220,7 @@ class Tensor:
         terms.cache()
 
         return terms.map(
-            lambda term: term.free_vars
+            lambda term: set(term.free_vars) if hasattr(term.free_vars, '__iter__') else set()
         ).aggregate(set(), _union, _union)
         # TODO: investigate performance characteristic with tree reduction.
 
@@ -3489,8 +3489,31 @@ current_drudge = None
 
 def _union(orig, new):
     """Union the two sets and return the first."""
-    orig |= new
-    return orig
+    # Handle case where the function itself is passed as orig (Dask compatibility issue)
+    if callable(orig):
+        if isinstance(new, set):
+            return new
+        else:
+            return set()
+    
+    if callable(new):
+        if isinstance(orig, set):
+            return orig
+        else:
+            return set()
+    
+    # Normal case: both are sets
+    if isinstance(orig, set) and isinstance(new, set):
+        orig |= new
+        return orig
+    
+    # Fallback: ensure we return a set
+    result = set()
+    if hasattr(orig, '__iter__') and not isinstance(orig, str):
+        result.update(orig)
+    if hasattr(new, '__iter__') and not isinstance(new, str):
+        result.update(new)
+    return result
 
 
 def _inters(orig, new):
