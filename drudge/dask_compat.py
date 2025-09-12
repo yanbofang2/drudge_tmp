@@ -97,8 +97,19 @@ class DaskBag:
     
     def union(self, *other_bags) -> 'DaskBag':
         """Union with other bags."""
-        all_bags = [self._bag] + [bag._bag if hasattr(bag, '_bag') else bag for bag in other_bags]
-        return DaskBag(db.concat(all_bags))
+        dask_bags = [self._bag]
+        
+        for bag in other_bags:
+            if hasattr(bag, '_bag'):
+                dask_bags.append(bag._bag)
+            elif hasattr(bag, '__dask_keys__'):
+                # It's already a dask bag
+                dask_bags.append(bag)
+            else:
+                # Convert list or other iterable to dask bag
+                dask_bags.append(db.from_sequence(bag))
+        
+        return DaskBag(db.concat(dask_bags))
     
     def cartesian(self, other_bag) -> 'DaskBag':
         """Cartesian product with another bag."""
@@ -201,9 +212,12 @@ class DaskContext:
         for bag in bags:
             if hasattr(bag, '_bag'):
                 dask_bags.append(bag._bag)
-            else:
-                # Assume it's already a dask bag
+            elif hasattr(bag, '__dask_keys__'):
+                # It's already a dask bag
                 dask_bags.append(bag)
+            else:
+                # Convert list or other iterable to dask bag
+                dask_bags.append(db.from_sequence(bag))
         
         if not dask_bags:
             return DaskBag(db.from_sequence([]))
