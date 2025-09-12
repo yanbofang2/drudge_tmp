@@ -99,6 +99,47 @@ class DaskBag:
         """Union with other bags."""
         all_bags = [self._bag] + [bag._bag if hasattr(bag, '_bag') else bag for bag in other_bags]
         return DaskBag(db.concat(all_bags))
+    
+    def cartesian(self, other_bag) -> 'DaskBag':
+        """Cartesian product with another bag."""
+        other = other_bag._bag if hasattr(other_bag, '_bag') else other_bag
+        
+        # Get all items from both bags
+        self_items = self._bag
+        other_items = other
+        
+        # Create cartesian product using nested map
+        def cartesian_map(item):
+            return other_items.map(lambda other_item: (item, other_item))
+        
+        result = self_items.map(cartesian_map).flatten()
+        return DaskBag(result)
+    
+    def countByKey(self) -> dict:
+        """Count occurrences of each key (assumes bag contains (key, value) pairs)."""
+        def get_key(item):
+            return item[0] if isinstance(item, (tuple, list)) and len(item) >= 2 else item
+        
+        # Group by key and count
+        grouped = self._bag.groupby(get_key)
+        result = grouped.map(lambda x: (x[0], len(list(x[1])))).compute()
+        return dict(result)
+        
+    def keys(self) -> 'DaskBag':
+        """Get the keys from (key, value) pairs."""
+        return DaskBag(self._bag.map(lambda x: x[0]))
+        
+    def values(self) -> 'DaskBag':
+        """Get the values from (key, value) pairs."""
+        return DaskBag(self._bag.map(lambda x: x[1]))
+        
+    def sortBy(self, key_func) -> 'DaskBag':
+        """Sort the bag by a key function."""
+        # Convert to list, sort, then back to bag
+        sorted_items = self._bag.map_partitions(
+            lambda partition: sorted(partition, key=key_func)
+        )
+        return DaskBag(sorted_items)
 
 
 class DaskContext:
@@ -107,11 +148,11 @@ class DaskContext:
     def __init__(self, client: Optional[Client] = None):
         """Initialize the Dask context."""
         if client is None:
-            try:
-                self._client = Client.current()
-            except ValueError:
-                # Start a local client if none exists
-                self._client = Client(processes=False, silence_logs=False)
+            # Use synchronous local scheduler to avoid serialization issues
+            import dask
+            self._client = None
+            # Set global dask config to use synchronous scheduler
+            dask.config.set(scheduler='synchronous')
         else:
             self._client = client
     
@@ -123,6 +164,8 @@ class DaskContext:
     @property
     def defaultParallelism(self) -> int:
         """Get default parallelism (number of workers * threads per worker)."""
+        if self._client is None:
+            return 1  # Local mode
         try:
             info = self._client.scheduler_info()
             total_cores = sum(worker['nthreads'] for worker in info['workers'].values())
@@ -139,6 +182,9 @@ class DaskContext:
     
     def broadcast(self, value: Any) -> 'DaskBroadcast':
         """Create a broadcast variable."""
+        if self._client is None:
+            # Local mode - return a simple wrapper
+            return DaskBroadcast(None, value)
         return DaskBroadcast(self._client, value)
     
     def union(self, *bags) -> DaskBag:
@@ -168,16 +214,20 @@ class DaskContext:
 class DaskBroadcast:
     """Dask broadcast variable using distributed variables."""
     
-    def __init__(self, client: Client, value: Any):
+    def __init__(self, client: Optional[Client], value: Any):
         """Initialize broadcast variable."""
         self._client = client
         self._value = value
         # Store in distributed memory if possible
-        try:
-            self._var = Variable(name=f"broadcast_{id(self)}", client=client)
-            self._var.set(value)
-        except:
-            # Fallback to local storage
+        if client is not None:
+            try:
+                self._var = Variable(name=f"broadcast_{id(self)}", client=client)
+                self._var.set(value)
+            except:
+                # Fallback to local storage
+                self._var = None
+        else:
+            # Local mode - no distributed variable
             self._var = None
     
     @property

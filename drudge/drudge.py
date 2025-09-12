@@ -430,8 +430,10 @@ class Tensor:
         """
 
         dumms = self._drudge.dumms
+        dumms_value = dumms.value
+        
         res_terms = terms.map(
-            lambda term: term.reset_dumms(dumms=dumms.value, excl=excl)[0]
+            functools.partial(_reset_dumms_helper, dumms=dumms_value, excl=excl)
         )
         return res_terms
 
@@ -3485,6 +3487,11 @@ current_drudge = None
 #
 # Small static utilities
 #
+
+
+def _reset_dumms_helper(term, dumms, excl):
+    """Helper function for resetting dummies in a term."""
+    return term.reset_dumms(dumms=dumms, excl=excl)[0]
 
 
 def _union(orig, new):
