@@ -77,7 +77,7 @@ class DaskBag:
     
     def aggregate(self, zero_value, seq_func, comb_func):
         """Aggregate using sequence and combine functions."""
-        return self._bag.fold(seq_func, zero_value, comb_func).compute()
+        return self._bag.fold(seq_func, combine=comb_func, initial=zero_value).compute()
     
     def reduce(self, func: Callable):
         """Reduce using function."""

@@ -7,9 +7,9 @@ from drudge import PartHoleDrudge
 
 
 @pytest.fixture(scope='module')
-def parthole(local_ctx):
+def parthole(dask_ctx):
     """Initialize the environment for a free algebra."""
-    dr = PartHoleDrudge(local_ctx)
+    dr = PartHoleDrudge(dask_ctx)
     return dr
 
 
