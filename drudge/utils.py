@@ -6,7 +6,7 @@ import string
 import time
 from collections.abc import Sequence
 
-from .dask_compat import DaskBag, DaskContext, DaskVariable, nest_bind_dask
+from .local_compat import LocalBag, LocalContext, LocalVariable, nest_bind_local
 from sympy import (
     sympify, Symbol, Expr, SympifyError, count_ops, default_sort_key,
     AtomicExpr, Integer, S
@@ -264,7 +264,7 @@ class BCastVar:
         '_bcast'
     ]
 
-    def __init__(self, ctx: DaskContext, var):
+    def __init__(self, ctx: LocalContext, var):
         """Initialize the broadcast variable."""
         self._ctx = ctx
         self._var = var
@@ -293,14 +293,14 @@ class BCastVar:
         return self._bcast
 
 
-def nest_bind(bag: DaskBag, func, full_balance=True):
+def nest_bind(bag: LocalBag, func, full_balance=True):
     """Nest the flat map of the given function.
 
     When an entry no longer need processing, None can be returned by the call
     back function.
 
     """
-    return nest_bind_dask(bag, func, full_balance)
+    return nest_bind_local(bag, func, full_balance)
 
 
 

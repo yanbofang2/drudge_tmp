@@ -7,7 +7,7 @@ import itertools
 import operator
 import typing
 
-from .dask_compat import DaskBag
+from .local_compat import LocalBag
 from sympy import sympify, Expr, Integer, KroneckerDelta, SympifyError
 
 from .drudge import Drudge
@@ -79,7 +79,7 @@ class GenQuadDrudge(Drudge, abc.ABC):
         """
         pass
 
-    def normal_order(self, terms: DaskBag, **kwargs):
+    def normal_order(self, terms: LocalBag, **kwargs):
         """Normal order the terms in the RDD."""
 
         if len(kwargs) > 0:

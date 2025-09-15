@@ -11,10 +11,10 @@ from drudge import GenMBDrudge, CR, AN, Range
 
 
 @pytest.fixture(scope='module')
-def genmb(dask_ctx):
+def genmb(local_ctx):
     """Initialize the environment for a free algebra."""
 
-    dr = GenMBDrudge(dask_ctx)
+    dr = GenMBDrudge(local_ctx)
     return dr
 
 
@@ -208,7 +208,7 @@ def test_dagger_of_field_operators(genmb):
     assert compl_dag == dr.einst(conjugate(x[a, b]) * c_dag[b] * c_[a])
 
 
-def test_diag_tight_binding_hamiltonian(dask_ctx):
+def test_diag_tight_binding_hamiltonian(local_ctx):
     """Test automatic diagonalization of the tight-binding Hamiltonian.
 
     The primary target of this test is the simplification of amplitude
@@ -216,7 +216,7 @@ def test_diag_tight_binding_hamiltonian(dask_ctx):
     """
 
     n = Symbol('N', integer=True)
-    dr = GenMBDrudge(dask_ctx, orb=(
+    dr = GenMBDrudge(local_ctx, orb=(
         (Range('L', 0, n), symbols('x y z x1 x2', integer=True)),
     ))
 

@@ -8,18 +8,12 @@ import pytest
 USE_DISTRIBUTED_DASK = 'DISTRIBUTED_DASK' in os.environ
 
 @pytest.fixture(scope='session', autouse=True)
-def dask_ctx():
-    """A Dask context for testing."""
-    from drudge.dask_compat import DaskContext
+def local_ctx():
+    """A local context for testing."""
+    from drudge.local_compat import LocalContext
     
-    if USE_DISTRIBUTED_DASK:
-        # Use distributed Dask with a local cluster
-        from dask.distributed import Client
-        client = Client(processes=False, silence_logs=False)
-        ctx = DaskContext(client)
-    else:
-        # Use local Dask (similar to dummy_spark behavior)
-        ctx = DaskContext()
+    # Always use local computation
+    ctx = LocalContext()
     
     return ctx
 
