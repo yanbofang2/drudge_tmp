@@ -5,7 +5,7 @@ import itertools
 import operator
 import typing
 
-from .local_compat import LocalBag
+from .utils import DaskBag
 from sympy import Expr, Integer, KroneckerDelta
 
 from .term import Vec, Term
@@ -102,7 +102,7 @@ class CliffordDrudge(WickDrudge):
         """
         return self._contractor
 
-    def normal_order(self, terms: LocalBag, **kwargs):
+    def normal_order(self, terms: DaskBag, **kwargs):
         """Put vectors in Clifford algebra in normal-order.
 
         After the normal-ordering by Wick expansion, adjacent equal vectors will

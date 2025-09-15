@@ -10,10 +10,10 @@ USE_DISTRIBUTED_DASK = 'DISTRIBUTED_DASK' in os.environ
 @pytest.fixture(scope='session', autouse=True)
 def local_ctx():
     """A local context for testing."""
-    from drudge.local_compat import LocalContext
+    from drudge.utils import DaskContext
     
     # Always use local computation
-    ctx = LocalContext()
+    ctx = DaskContext()
     
     return ctx
 
