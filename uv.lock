@@ -289,6 +289,11 @@ docs = [
     { name = "sphinx" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "dask", extras = ["complete"], specifier = ">=2024.1.0" },
@@ -299,6 +304,9 @@ requires-dist = [
     { name = "sympy", specifier = ">=1.14" },
 ]
 provides-extras = ["docs", "dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.4.1" }]
 
 [[package]]
 name = "executing"

@@ -7,9 +7,9 @@ from drudge import ReducedBCSDrudge
 
 
 @pytest.fixture(scope='module')
-def rbcs(local_ctx):
+def rbcs(dask_ctx):
     """Initialize the environment for a reduced BCS problem."""
-    return ReducedBCSDrudge(local_ctx)
+    return ReducedBCSDrudge(dask_ctx)
 
 
 def test_rbcs_has_basic_commutations(rbcs: ReducedBCSDrudge):

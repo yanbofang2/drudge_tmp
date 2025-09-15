@@ -43,3 +43,8 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 drudge = ["templates/*", "*.h"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+]

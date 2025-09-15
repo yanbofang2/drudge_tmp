@@ -163,6 +163,23 @@ class DaskBag:
             lambda partition: sorted(partition, key=key_func)
         )
         return DaskBag(sorted_items)
+    
+    def __getitem__(self, index):
+        """Make DaskBag subscriptable for compatibility.
+        
+        Note: This converts the entire bag to a list first, which can be expensive.
+        This is needed for compatibility with code that expects RDD-like indexing.
+        """
+        if isinstance(index, slice):
+            items = self.collect()
+            return items[index]
+        else:
+            items = self.collect()
+            return items[index]
+    
+    def __len__(self):
+        """Get the length of the bag."""
+        return self.count()
 
 
 class DaskContext:
@@ -328,7 +345,9 @@ def _nest_bind_full_balance_dask(bag: DaskBag, func: Callable) -> DaskBag:
     if not result_bags:
         return DaskBag(db.from_sequence([]))
     
-    return bag.context.union(result_bags)
+    # Get a DaskContext to perform the union
+    ctx = DaskContext()
+    return ctx.union(result_bags)
 
 
 def _nest_bind_no_balance_dask(bag: DaskBag, func: Callable) -> DaskBag:
