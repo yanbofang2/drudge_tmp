@@ -131,7 +131,11 @@ class DaskBag:
                 # Convert list or other iterable to dask bag
                 dask_bags.append(db.from_sequence(bag))
         
-        return DaskBag(db.concat(dask_bags))
+        # Force immediate computation and recreation to avoid lazy evaluation issues
+        result_bag = db.concat(dask_bags)
+        # Compute immediately and recreate to ensure deterministic behavior
+        computed_items = result_bag.compute()
+        return DaskBag(db.from_sequence(computed_items))
     
     def cartesian(self, other_bag) -> 'DaskBag':
         """Cartesian product with another bag."""
