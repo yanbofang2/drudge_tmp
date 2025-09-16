@@ -77,7 +77,17 @@ class DaskBag:
     
     def aggregate(self, zero_value, seq_func, comb_func):
         """Aggregate using sequence and combine functions."""
-        return self._bag.fold(seq_func, combine=comb_func, initial=zero_value).compute()
+        # Handle empty bags gracefully
+        try:
+            # Check if bag is empty by checking npartitions
+            if self._bag.npartitions == 0:
+                return zero_value
+            return self._bag.fold(seq_func, combine=comb_func, initial=zero_value).compute()
+        except (TypeError, ValueError) as e:
+            # Handle empty bag edge case
+            if "empty" in str(e).lower() or "reduce()" in str(e):
+                return zero_value
+            raise
     
     def reduce(self, func: Callable):
         """Reduce using function."""
