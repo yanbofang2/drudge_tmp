@@ -79,6 +79,4 @@ jobs:
         uv pip install coverage coveralls
 
     - name: Run tests with coverage
-      env:
-        DUMMY_SPARK: 1
       run: uv run coverage run --source=drudge -m pytest tests
