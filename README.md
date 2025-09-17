@@ -123,5 +123,5 @@ supported as part of the Center for the Computational Design of Functional
 Layered Materials, an Energy Frontier Research Center funded by the U.S.
 Department of Energy, Office of Science, Basic Energy Sciences under Award
 DE-SC0012575. The package is currently maintained by Guo P. Chen, Gaurav
-Harsha, Matthew Wholey, and members of the Scueria group.
+Harsha, Matthew Wholey, and other members of the Scueria group.
 

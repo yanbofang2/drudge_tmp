@@ -89,11 +89,6 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# For PyCharm
-/.idea/workspace.xml
-/.idea/tasks.xml
-/.idea/markdown*
-
 # For testing files
 /tests/metastore_db
 /tests/test-env.sh
