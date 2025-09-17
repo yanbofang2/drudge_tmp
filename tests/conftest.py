@@ -10,7 +10,7 @@ USE_DISTRIBUTED_DASK = 'DISTRIBUTED_DASK' in os.environ
 @pytest.fixture(scope='session', autouse=True)
 def dask_ctx():
     """A Dask context for testing."""
-    from drudge.dask_compat import DaskContext
+    from drudge.utils import DaskContext
     
     if USE_DISTRIBUTED_DASK:
         # Use distributed Dask with a local cluster
@@ -22,6 +22,9 @@ def dask_ctx():
         ctx = DaskContext()
     
     return ctx
+
+
+
 
 
 def skip_in_distributed(**kwargs):

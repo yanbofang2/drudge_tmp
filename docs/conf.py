@@ -167,7 +167,7 @@ autodoc_member_order = 'bysource'
 doctest_global_setup = '''
 import os
 
-from dummy_spark import SparkContext
+from drudge import DaskContext
 
 from sympy import *
 from drudge import *

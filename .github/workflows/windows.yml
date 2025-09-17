@@ -18,7 +18,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version-file: "pyproject.toml"
+        python-version: "3.12"
 
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
@@ -57,7 +57,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version-file: "pyproject.toml"
+        python-version: "3.12"
 
     - name: Setup MSVC
       uses: ilammy/msvc-dev-cmd@v1
@@ -79,6 +79,4 @@ jobs:
         uv pip install coverage coveralls
 
     - name: Run tests with coverage
-      env:
-        DUMMY_SPARK: 1
       run: uv run coverage run --source=drudge -m pytest tests

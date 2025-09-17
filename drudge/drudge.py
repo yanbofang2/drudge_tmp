@@ -13,7 +13,7 @@ import warnings
 from collections.abc import Iterable, Sequence
 
 from IPython.display import Math, display
-from .dask_compat import DaskBag, DaskContext
+from .utils import DaskBag, DaskContext
 from sympy import (
     IndexedBase, Symbol, Indexed, Wild, symbols, sympify, Expr, Add, Matrix, Mul
 )

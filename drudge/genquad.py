@@ -7,7 +7,7 @@ import itertools
 import operator
 import typing
 
-from .dask_compat import DaskBag
+from .utils import DaskBag
 from sympy import sympify, Expr, Integer, KroneckerDelta, SympifyError
 
 from .drudge import Drudge

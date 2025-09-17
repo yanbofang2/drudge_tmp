@@ -8,7 +8,7 @@ import abc
 import functools
 import typing
 
-from .dask_compat import DaskBag
+from .utils import DaskBag
 from sympy import Expr
 
 from .drudge import Drudge

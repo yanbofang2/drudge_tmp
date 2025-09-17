@@ -9,7 +9,7 @@ import functools
 import typing
 import warnings
 
-from .dask_compat import DaskBag
+from .utils import DaskBag
 from sympy import (
     KroneckerDelta, IndexedBase, Expr, Symbol, Rational, symbols, conjugate,
     factorial
@@ -193,7 +193,19 @@ class FockDrudge(WickDrudge):
         """
 
         step1 = super().normal_order(terms, **kwargs)
-        res = super().normal_order(step1, **kwargs)
+        
+        # Separate scalar terms (0 vectors) from operator terms for second pass
+        # Scalar terms should not be affected by normal ordering
+        scalar_terms = step1.filter(lambda x: len(x.vecs) == 0)
+        operator_terms = step1.filter(lambda x: len(x.vecs) > 0)
+        
+        # Apply second normal ordering only to operator terms
+        if operator_terms.count() > 0:
+            step2_ops = super().normal_order(operator_terms, **kwargs)
+            res = scalar_terms.union(step2_ops)
+        else:
+            res = scalar_terms
+            
         if self._exch == FERMI:
             res = res.filter(_is_not_zero_by_nilp)
         return res

@@ -20,8 +20,9 @@ from .clifford import CliffordDrudge, inner_by_delta
 from .bcs import ReducedBCSDrudge
 from .nuclear import NuclearBogoliubovDrudge
 from .report import Report, ScalarLatexPrinter
-from .dask_compat import DaskContext
-from .utils import sum_, prod_, Stopwatch, CallByIndex, InvariantIndexable
+from .utils import sum_, prod_, Stopwatch, CallByIndex, InvariantIndexable, DaskContext
+
+
 
 __version__ = '0.10.0dev0'
 

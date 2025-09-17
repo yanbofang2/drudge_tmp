@@ -190,10 +190,9 @@ def test_drs_env():
 
 
 CONF_SCRIPT = """
-from dummy_spark import SparkContext
-from drudge import Drudge
+from drudge import DaskContext, Drudge
 
-{} = Drudge(SparkContext())
+{} = Drudge(DaskContext())
 """.format(_DRUDGE_MAGIC)
 
 DRUDGE_SCRIPT = """

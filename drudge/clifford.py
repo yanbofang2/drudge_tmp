@@ -5,7 +5,7 @@ import itertools
 import operator
 import typing
 
-from .dask_compat import DaskBag
+from .utils import DaskBag
 from sympy import Expr, Integer, KroneckerDelta
 
 from .term import Vec, Term
