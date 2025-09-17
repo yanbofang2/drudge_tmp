@@ -22,8 +22,7 @@ from .nuclear import NuclearBogoliubovDrudge
 from .report import Report, ScalarLatexPrinter
 from .utils import sum_, prod_, Stopwatch, CallByIndex, InvariantIndexable, DaskContext
 
-# Backward compatibility alias
-LocalContext = DaskContext
+
 
 __version__ = '0.10.0dev0'
 
@@ -82,6 +81,5 @@ __all__ = [
     'ScalarLatexPrinter',
     
     # Dask support.
-    'DaskContext',
-    'LocalContext'
+    'DaskContext'
 ]

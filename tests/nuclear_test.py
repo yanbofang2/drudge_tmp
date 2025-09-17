@@ -13,9 +13,9 @@ from drudge.nuclear import (
 from conftest import skip_in_distributed
 
 @pytest.fixture(scope='module')
-def nuclear(local_ctx):
+def nuclear(dask_ctx):
     """Set up the drudge to test."""
-    return NuclearBogoliubovDrudge(local_ctx)
+    return NuclearBogoliubovDrudge(dask_ctx)
 
 
 #

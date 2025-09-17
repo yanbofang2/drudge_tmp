@@ -25,9 +25,9 @@ def test_up_down_enum_symbs():
 
 
 @pytest.fixture(scope='module')
-def genmb(local_ctx):
+def genmb(dask_ctx):
     """The fixture with a general spin one-half drudge."""
-    return SpinOneHalfGenDrudge(local_ctx)
+    return SpinOneHalfGenDrudge(dask_ctx)
 
 
 def test_spin_one_half_general_drudge_has_properties(genmb):
@@ -83,9 +83,9 @@ def test_restricted_hf_theory(genmb):
 
 
 @pytest.fixture(scope='module')
-def parthole(local_ctx):
+def parthole(dask_ctx):
     """The fixture with a particle-hole spin one-half drudge."""
-    return SpinOneHalfPartHoleDrudge(local_ctx)
+    return SpinOneHalfPartHoleDrudge(dask_ctx)
 
 
 def test_spin_one_half_particle_hole_drudge_has_basic_properties(parthole):
@@ -104,9 +104,9 @@ def test_spin_one_half_particle_hole_drudge_has_basic_properties(parthole):
 
 
 @pytest.fixture(scope='module')
-def restricted_parthole(local_ctx):
+def restricted_parthole(dask_ctx):
     """The fixture with a restricted particle-hole drudge."""
-    return RestrictedPartHoleDrudge(local_ctx)
+    return RestrictedPartHoleDrudge(dask_ctx)
 
 
 def test_restricted_parthole_drudge_has_good_hamiltonian(restricted_parthole):

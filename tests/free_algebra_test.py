@@ -20,10 +20,10 @@ from conftest import skip_in_distributed
 
 
 @pytest.fixture
-def free_alg(local_ctx):
+def free_alg(dask_ctx):
     """Initialize the environment for a free algebra."""
 
-    dr = Drudge(local_ctx)
+    dr = Drudge(dask_ctx)
 
     r = Range('R')
     dumms = sympify('i, j, k, l, m, n')
@@ -220,7 +220,7 @@ def test_tensor_has_basic_operations(free_alg):
     assert res == dr.sum((a1, ranges), (a2, ranges), summand).simplify()
 
 
-def test_basic_handling_range_with_variable_bounds(local_ctx):
+def test_basic_handling_range_with_variable_bounds(dask_ctx):
     """Test the treatment of ranges with variable bounds.
 
     Here we use a simple example that slightly resembles the angular momentum
@@ -228,7 +228,7 @@ def test_basic_handling_range_with_variable_bounds(local_ctx):
     dummy resetting and mapping of scalar functions.
     """
 
-    dr = Drudge(local_ctx)
+    dr = Drudge(dask_ctx)
 
     j1, j2 = symbols('j1 j2')
     m1, m2 = symbols('m1, m2')
@@ -1124,7 +1124,7 @@ class y(Function):
     pass
 
 
-def test_sums_can_be_expanded(local_ctx):
+def test_sums_can_be_expanded(dask_ctx):
     """Test the summation expansion facility.
 
     Here we have essentially a direct product of two ranges and expand it.  The
@@ -1132,7 +1132,7 @@ def test_sums_can_be_expanded(local_ctx):
     paradigm.
     """
 
-    dr = Drudge(local_ctx)
+    dr = Drudge(dask_ctx)
 
     comp = Range('P')
     r1, r2 = symbols('r1, r2')

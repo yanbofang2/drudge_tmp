@@ -24,10 +24,7 @@ def dask_ctx():
     return ctx
 
 
-@pytest.fixture(scope='session')
-def local_ctx(dask_ctx):
-    """Alias for dask_ctx for backward compatibility."""
-    return dask_ctx
+
 
 
 def skip_in_distributed(**kwargs):

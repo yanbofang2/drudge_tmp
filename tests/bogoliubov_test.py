@@ -10,10 +10,10 @@ from drudge import BogoliubovDrudge, CR, AN
 
 
 @pytest.fixture(scope='module')
-def bogoliubov(local_ctx):
+def bogoliubov(dask_ctx):
     """Initialize the environment for a free algebra."""
 
-    dr = BogoliubovDrudge(local_ctx)
+    dr = BogoliubovDrudge(dask_ctx)
     return dr
 
 
