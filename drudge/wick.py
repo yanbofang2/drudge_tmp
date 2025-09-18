@@ -8,7 +8,7 @@ import abc
 import functools
 import typing
 
-from pyspark import RDD
+import dask.bag as db
 from sympy import Expr
 
 from .drudge import Drudge
@@ -92,7 +92,7 @@ class WickDrudge(Drudge, abc.ABC):
         """
         pass
 
-    def normal_order(self, terms: RDD, **kwargs):
+    def normal_order(self, terms: db.Bag, **kwargs):
         """Normal order the terms according to generalized Wick theorem.
 
         The actual expansion is based on the information given in the subclasses

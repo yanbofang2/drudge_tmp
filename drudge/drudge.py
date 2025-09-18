@@ -13,7 +13,7 @@ import warnings
 from collections.abc import Iterable, Sequence
 
 from IPython.display import Math, display
-from pyspark import RDD, SparkContext
+import dask.bag as db
 from sympy import (
     IndexedBase, Symbol, Indexed, Wild, symbols, sympify, Expr, Add, Matrix, Mul
 )
@@ -60,7 +60,7 @@ class Tensor:
     # Term creation
     #
 
-    def __init__(self, drudge: 'Drudge', terms: RDD,
+    def __init__(self, drudge: 'Drudge', terms: db.Bag,
                  free_vars: typing.Set[Symbol] = None,
                  expanded=False, repartitioned=False):
         """Initialize the tensor.
@@ -101,7 +101,7 @@ class Tensor:
 
     @property
     def terms(self):
-        """The terms in the tensor, as an RDD object.
+        """The terms in the tensor, as a Dask Bag object.
 
         Although for users, normally there is no need for direct manipulation of
         the terms, it is still exposed here for flexibility.
@@ -138,7 +138,7 @@ class Tensor:
             return len(self._local_terms)
         else:
             self.cache()  # We never get a tensor just to count its terms.
-            return self._terms.count()
+            return self._terms.count().compute()
 
     def cache(self):
         """Cache the terms in the tensor.
@@ -148,7 +148,8 @@ class Tensor:
         for the ease of chaining.
         """
 
-        self._terms.cache()
+        # In Dask, bags can be persisted, but it's not always necessary
+        # For simplicity, we'll make this a no-op since Dask handles optimization automatically
         return self
 
     def repartition(self, num_partitions=None, cache=False):
@@ -219,9 +220,9 @@ class Tensor:
         # The terms are definitely going to be used for other purposes.
         terms.cache()
 
-        return terms.map(
-            lambda term: term.free_vars
-        ).aggregate(set(), _union, _union)
+        # For aggregate operation with Dask, use fold
+        free_vars_bags = terms.map(lambda term: term.free_vars)
+        return free_vars_bags.fold(set(), _union).compute()
         # TODO: investigate performance characteristic with treeAggregate.
 
     @property
@@ -422,7 +423,7 @@ class Tensor:
 
         return self.apply(functools.partial(self._reset_dumms, excl=excl))
 
-    def _reset_dumms(self, terms: RDD, excl) -> RDD:
+    def _reset_dumms(self, terms: db.Bag, excl) -> db.Bag:
         """Get terms with dummies reset.
 
         Note that this function does not automatically add the free variables in
@@ -431,7 +432,7 @@ class Tensor:
 
         dumms = self._drudge.dumms
         res_terms = terms.map(
-            lambda term: term.reset_dumms(dumms=dumms.value, excl=excl)[0]
+            lambda term: term.reset_dumms(dumms=dumms, excl=excl)[0]
         )
         return res_terms
 
@@ -487,7 +488,7 @@ class Tensor:
         resolvers = self._drudge.resolvers
 
         return terms.map(
-            lambda x: x.simplify_deltas(resolvers.value)
+            lambda x: x.simplify_deltas(resolvers)
         ).filter(_is_nonzero)
 
     def simplify_sums(self, simplifiers=True, excl_bases=True):
@@ -541,12 +542,12 @@ class Tensor:
         ))
 
     def _simplify_sums(
-            self, terms: RDD, simplifiers=True, excl_bases=True
+            self, terms: db.Bag, simplifiers=True, excl_bases=True
     ):
         """Simplify the summations in the given terms."""
 
         if simplifiers is True:
-            simplifiers = self._drudge.sum_simplifiers.bcast
+            simplifiers = self._drudge.sum_simplifiers
 
         # Make it a two-step process for future extensibility.
         terms = terms.map(lambda x: x.simplify_trivial_sums())
@@ -605,9 +606,11 @@ class Tensor:
         return self.apply(self._sort)
 
     @staticmethod
-    def _sort(terms: RDD):
+    def _sort(terms: db.Bag):
         """Sort the terms in the tensor."""
-        return terms.sortBy(lambda term: term.sort_key)
+        # For Dask bags, collect and sort, then recreate the bag
+        sorted_terms = sorted(terms.compute(), key=lambda term: term.sort_key)
+        return db.from_sequence(sorted_terms, npartitions=terms.npartitions)
 
     def merge(self, consts=None, gens=None):
         """Merge some terms.
@@ -644,9 +647,14 @@ class Tensor:
         else:
             specials = _DecomposeSpecials(consts, gens)
 
-        return terms.map(
-            functools.partial(_decompose_term, specials=specials)
-        ).reduceByKey(operator.add).map(_recover_term)
+        # For reduceByKey with Dask, use foldby
+        decomposed = terms.map(functools.partial(_decompose_term, specials=specials))
+        reduced = decomposed.foldby(
+            key=lambda x: x[0],  # group by key
+            binop=lambda acc, x: operator.add(acc, x[1]) if acc is not None else x[1],
+            initial=None
+        )
+        return reduced.map(_recover_term)
 
     #
     # Canonicalization
@@ -677,7 +685,7 @@ class Tensor:
         else:
             expanded_terms = terms
         canoned = expanded_terms.map(
-            lambda term: term.canon(symms=symms.value, vec_colour=vec_colour)
+            lambda term: term.canon(symms=symms, vec_colour=vec_colour)
         )
         return canoned
 
@@ -866,7 +874,7 @@ class Tensor:
 
         dumms = self._drudge.dumms
         return Tensor(self._drudge, prod.map(
-            lambda x: x[0].mul_term(x[1], dumms=dumms.value, excl=free_vars)
+            lambda x: x[0].mul_term(x[1], dumms=dumms, excl=free_vars)
         ), free_vars=free_vars, expanded=expanded)
 
     def __or__(self, other):
@@ -894,7 +902,7 @@ class Tensor:
 
         dumms = self._drudge.dumms
         return Tensor(self._drudge, prod.flatMap(
-            lambda x: x[0].comm_term(x[1], dumms=dumms.value, excl=free_vars)
+            lambda x: x[0].comm_term(x[1], dumms=dumms, excl=free_vars)
         ), free_vars=free_vars, expanded=expanded)
 
     def _cartesian_terms(self, other, right):
@@ -1260,21 +1268,21 @@ class Tensor:
         # appearances of the lhs one-by-one.
 
         subs_states = self._terms.map(lambda x: x.reset_dumms(
-            dumms=dumms.value, excl=free_vars.value
+            dumms=dumms, excl=free_vars
         ))
 
         rhs_terms = self._drudge.ctx.broadcast(rhs_terms)
 
         if isinstance(lhs, (Indexed, Symbol)):
             res = nest_bind(subs_states, lambda x: subst_factor_term(
-                x[0], lhs, rhs_terms.value,
-                dumms=dumms.value, dummbegs=x[1], excl=free_vars.value,
+                x[0], lhs, rhs_terms,
+                dumms=dumms, dummbegs=x[1], excl=free_vars,
                 full_simplify=full_simplify
             ), full_balance=full_balance)
         else:
             res = nest_bind(subs_states, lambda x: subst_vec_term(
-                x[0], lhs, rhs_terms.value,
-                dumms=dumms.value, dummbegs=x[1], excl=free_vars.value
+                x[0], lhs, rhs_terms,
+                dumms=dumms, dummbegs=x[1], excl=free_vars
             ), full_balance=full_balance)
 
         res_terms = res.map(operator.itemgetter(0))
@@ -1381,9 +1389,11 @@ class Tensor:
 
         rewritten = self._terms.map(
             lambda term: rewrite_term(term, vecs, new_amp)
-        ).cache()
+        )
+        # For countByKey with Dask, group and count
+        count_dict = dict(rewritten.groupby(lambda x: x).map(lambda x: (x[0], len(list(x[1])))).compute())
         new_terms = [
-            i for i in rewritten.countByKey().keys() if i is not None
+            i for i in count_dict.keys() if i is not None
         ]
 
         get_term = operator.itemgetter(1)
@@ -1505,7 +1515,7 @@ class Tensor:
 
         if isinstance(variable, Indexed):
 
-            symms = self._drudge.symms.value
+            symms = self._drudge.symms
             if_symm = (
                     variable.base in symms or
                     (variable.base, len(variable.indices)) in symms
@@ -1830,7 +1840,7 @@ class TensorDef(Tensor):
         dumms = self.drudge.dumms
 
         exts, ext_substs, dummbegs = Term.reset_sums(
-            self._exts, dumms.value, excl=excl
+            self._exts, dumms, excl=excl
         )
 
         free_vars = self.free_vars
@@ -1843,7 +1853,7 @@ class TensorDef(Tensor):
         tensor = Tensor(
             self.drudge,
             self.terms.map(lambda x: x.reset_dumms(
-                dumms=dumms.value, excl=excl,
+                dumms=dumms, excl=excl,
                 dummbegs=dict(dummbegs), add_substs=ext_substs
             )[0])
         )
@@ -1974,28 +1984,22 @@ class Drudge:
 
     # We do not need slots here.  There is generally only one drudge instance.
 
-    def __init__(self, ctx: SparkContext, num_partitions=True):
+    def __init__(self, num_partitions=None):
         """Initialize the drudge.
 
         Parameters
         ----------
 
-        ctx
-            The Spark context to be used.
-
         num_partitions
-            The preferred number of partitions.  By default, it is the default
-            parallelism of the given Spark environment.  Or an explicit integral
-            value can be given.  It can be set to None, which disable all
-            explicit load-balancing by shuffling.
+            The preferred number of partitions for Dask operations. By default, 
+            uses a reasonable default based on available cores. Can be set to None
+            which disables explicit load-balancing by shuffling.
 
         """
 
-        self._ctx = ctx
-
-        if num_partitions is True:
-            self._num_partitions = self._ctx.defaultParallelism
-        elif isinstance(num_partitions, int) or num_partitions is None:
+        if num_partitions is None:
+            self._num_partitions = 4  # Default reasonable number
+        elif isinstance(num_partitions, int):
             self._num_partitions = num_partitions
         else:
             raise TypeError('Invalid default partition', num_partitions)
@@ -2005,9 +2009,10 @@ class Drudge:
 
         self._default_einst = False
 
-        self._dumms = BCastVar(self._ctx, {})
-        self._symms = BCastVar(self._ctx, {})
-        self._resolvers = BCastVar(self._ctx, [])
+        # Store these as regular variables instead of broadcast variables
+        self._dumms = {}
+        self._symms = {}
+        self._resolvers = []
 
         self._names = types.SimpleNamespace()
 
@@ -2021,9 +2026,9 @@ class Drudge:
         self._inside_drs = False
 
         # Default simplification of summation.
-        self.sum_simplifiers = BCastVar(self._ctx, {
+        self.sum_simplifiers = {
             1: [_simplify_symbolic_sum]
-        })
+        }
 
     @property
     def ctx(self):
@@ -2262,7 +2267,7 @@ class Drudge:
         """
 
         new_dumms = [ensure_symb(i) for i in dumms]
-        self._dumms.var[range_] = new_dumms
+        self._dumms[range_] = new_dumms
 
         if set_range_name:
             self.set_name(range_)
@@ -2276,9 +2281,9 @@ class Drudge:
 
     @property
     def dumms(self):
-        """The broadcast form of the dummies dictionary.
+        """The dummies dictionary.
         """
-        return self._dumms.bcast
+        return self._dumms
 
     def set_symm(self, base, *symms, valence=None, set_base_name=True):
         """Set the symmetry for a given base.
@@ -2341,7 +2346,7 @@ class Drudge:
                     'Invalid valence', valence, 'expecting positive integer'
                 )
 
-        self._symms.var[
+        self._symms[
             base if valence is None else (base, valence)
         ] = group
 
@@ -2352,9 +2357,9 @@ class Drudge:
 
     @property
     def symms(self):
-        """The broadcast form of the symmetries.
+        """The symmetries dictionary.
         """
-        return self._symms.bcast
+        return self._symms
 
     def add_resolver(self, resolver):
         """Append a resolver to the list of resolvers.
@@ -2365,7 +2370,7 @@ class Drudge:
         returned to signal the incapability to resolve the expression.  Then the
         resolution will be dispatched to the next resolver.
         """
-        self._resolvers.var.append(resolver)
+        self._resolvers.append(resolver)
         return
 
     def add_resolver_for_dumms(self, ranges=None, strict=False):
@@ -2396,7 +2401,7 @@ class Drudge:
         """
 
         # Normalize the ranges to iterable of range/dummies pairs.
-        curr_dumms = self._dumms.ro.items()
+        curr_dumms = self._dumms.items()
         if ranges is None:
             to_proc = curr_dumms
         else:
@@ -2424,8 +2429,8 @@ class Drudge:
 
     @property
     def resolvers(self):
-        """The broadcast form of the resolvers."""
-        return self._resolvers.bcast
+        """The resolvers list."""
+        return self._resolvers
 
     def set_tensor_method(self, name, func):
         """Set a new tensor method under the given name.
@@ -2658,7 +2663,7 @@ class Drudge:
         if isinstance(summand, Tensor):
 
             einst_res = summand.expand().terms.map(
-                lambda x: einst_term(x, resolvers.value)
+                lambda x: einst_term(x, resolvers)
             ).cache()
             tensor = Tensor(
                 self, einst_res.flatMap(operator.itemgetter(0)), expanded=True
@@ -2681,9 +2686,9 @@ class Drudge:
                     curr[1] = _inters(curr[1], new[1])
                     return curr
 
-                exts_union, exts_inters = einst_res.aggregate(
-                    [set(), None], seq_op, comb_op
-                )
+                # For complex aggregate with Dask, use fold with the seq_op function
+                result = einst_res.fold([set(), None], seq_op).compute()
+                exts_union, exts_inters = result
 
         else:
             res_terms = []
@@ -2693,7 +2698,7 @@ class Drudge:
             for i in parse_terms(summand):
                 # We need to expand the possibly parenthesized user input.
                 for j in i.expand():
-                    terms, exts = einst_term(j, resolvers.value)
+                    terms, exts = einst_term(j, resolvers)
                     res_terms.extend(terms)
                     exts_union |= exts
                     exts_inters = _inters(exts_inters, exts)
@@ -2721,7 +2726,7 @@ class Drudge:
         The terms should be given as an iterable of Term objects.  This function
         should not be necessary in user code.
         """
-        return Tensor(self, self._ctx.parallelize(terms))
+        return Tensor(self, db.from_sequence(terms, npartitions=self._num_partitions))
 
     #
     # Tensor definition creation.
@@ -2819,7 +2824,7 @@ class Drudge:
         exts = []
         for i in indices:
             if isinstance(i, Symbol):
-                range_ = try_resolve_range(i, {}, self.resolvers.value)
+                range_ = try_resolve_range(i, {}, self.resolvers)
                 if range_ is None:
                     raise ValueError(
                         'Invalid index', i, 'range cannot be resolved'
@@ -3395,7 +3400,7 @@ class Drudge:
 
         if rhs_vecs is None:
             rhs_vecs = set()
-            for i in coeffs.values():
+            for i in coeffss():
                 rhs_vecs.update(i.keys())
                 continue
             rhs_vecs = list(rhs_vecs)

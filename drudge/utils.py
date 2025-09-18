@@ -6,7 +6,7 @@ import string
 import time
 from collections.abc import Sequence
 
-from pyspark import RDD, SparkContext
+import dask.bag as db
 from sympy import (
     sympify, Symbol, Expr, SympifyError, count_ops, default_sort_key,
     AtomicExpr, Integer, S
@@ -259,21 +259,16 @@ class BCastVar:
     """
 
     __slots__ = [
-        '_ctx',
-        '_var',
-        '_bcast'
+        '_var'
     ]
 
-    def __init__(self, ctx: SparkContext, var):
-        """Initialize the broadcast variable."""
-        self._ctx = ctx
+    def __init__(self, var):
+        """Initialize the variable storage."""
         self._var = var
-        self._bcast = None
 
     @property
     def var(self):
         """Get the variable to mutate."""
-        self._bcast = None
         return self._var
 
     @property
@@ -287,13 +282,11 @@ class BCastVar:
 
     @property
     def bcast(self):
-        """Get the broadcast variable."""
-        if self._bcast is None:
-            self._bcast = self._ctx.broadcast(self._var)
-        return self._bcast
+        """Get the variable (no broadcasting in simplified version)."""
+        return self
 
 
-def nest_bind(rdd: RDD, func, full_balance=True):
+def nest_bind(bag: db.Bag, func, full_balance=True):
     """Nest the flat map of the given function.
 
     When an entry no longer need processing, None can be returned by the call
@@ -302,16 +295,14 @@ def nest_bind(rdd: RDD, func, full_balance=True):
     """
 
     if full_balance:
-        return _nest_bind_full_balance(rdd, func)
+        return _nest_bind_full_balance(bag, func)
     else:
-        return _nest_bind_no_balance(rdd, func)
+        return _nest_bind_no_balance(bag, func)
 
 
-def _nest_bind_full_balance(rdd: RDD, func):
+def _nest_bind_full_balance(bag: db.Bag, func):
     """Nest the flat map of the given function with full load balancing.
     """
-
-    ctx = rdd.context
 
     def wrapped(obj):
         """Wrapped function for nest bind."""
@@ -321,23 +312,22 @@ def _nest_bind_full_balance(rdd: RDD, func):
         else:
             return [(True, i) for i in vals]
 
-    curr = rdd
-    curr.cache()
+    curr = bag
     res = []
-    while curr.count() > 0:
-        step_res = curr.flatMap(wrapped)
-        step_res.cache()
+    while curr.count().compute() > 0:
+        step_res = curr.map(wrapped).flatten()
         new_entries = step_res.filter(lambda x: not x[0]).map(lambda x: x[1])
-        new_entries.cache()
         res.append(new_entries)
         curr = step_res.filter(lambda x: x[0]).map(lambda x: x[1])
-        curr.cache()
-        continue
 
-    return ctx.union(res)
+    # Union all results
+    if res:
+        return db.concat(res)
+    else:
+        return db.from_sequence([])
 
 
-def _nest_bind_no_balance(rdd: RDD, func):
+def _nest_bind_no_balance(bag: db.Bag, func):
     """Nest the flat map of the given function without load balancing.
     """
 
@@ -359,7 +349,7 @@ def _nest_bind_no_balance(rdd: RDD, func):
 
         return res
 
-    return rdd.flatMap(wrapped)
+    return bag.map(wrapped).flatten()
 
 
 #
