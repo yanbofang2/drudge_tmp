@@ -29,7 +29,14 @@ class DaskBag:
     
     def flatMap(self, func: Callable) -> 'DaskBag':
         """Flat map function over bag elements."""
-        return DaskBag(self._bag.map(func).flatten())
+        def safe_func(x):
+            result = func(x)
+            # Handle None results by converting to empty list
+            if result is None:
+                return []
+            return result
+        
+        return DaskBag(self._bag.map(safe_func).flatten())
     
     def filter(self, func: Callable) -> 'DaskBag':
         """Filter bag elements."""
@@ -125,6 +132,23 @@ class DaskBag:
             # If there's any issue with compute(), return zero_value
             print(f"Warning: aggregate failed with {e}, returning zero_value")
             return zero_value
+    
+    def countByKey(self) -> dict:
+        """Count occurrences of each key (assumes elements are (key, value) pairs)."""
+        # Group by key and count each group, then return as dict
+        grouped = self._bag.groupby(lambda x: x[0])
+        
+        def count_group(group):
+            key, items = group
+            return (key, len(list(items)))
+        
+        # Convert to dict
+        result_pairs = grouped.map(count_group).compute()
+        return dict(result_pairs)
+    
+    def getNumPartitions(self) -> int:
+        """Get number of partitions."""
+        return self._bag.npartitions
     
     def cache(self) -> 'DaskBag':
         """Cache the bag (no-op in Dask, returns self)."""

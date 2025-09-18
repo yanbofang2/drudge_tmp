@@ -610,7 +610,7 @@ class Tensor:
         # For DaskBag, we need to collect, sort, and redistribute
         sorted_terms = sorted(terms.collect(), key=lambda term: term.sort_key)
         import dask.bag as db
-        return DaskBag(db.from_sequence(sorted_terms, npartitions=terms.getNumPartitions()))
+        return DaskBag(db.from_sequence(sorted_terms, npartitions=terms._bag.npartitions))
 
     def merge(self, consts=None, gens=None):
         """Merge some terms.
