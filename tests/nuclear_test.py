@@ -13,9 +13,9 @@ from drudge.nuclear import (
 from conftest import skip_in_spark
 
 @pytest.fixture(scope='module')
-def nuclear(spark_ctx):
+def nuclear(dask_ctx):
     """Set up the drudge to test."""
-    return NuclearBogoliubovDrudge(spark_ctx)
+    return NuclearBogoliubovDrudge(dask_ctx)
 
 
 #

@@ -6,7 +6,7 @@ import string
 import time
 from collections.abc import Sequence
 
-from pyspark import RDD, SparkContext
+from .dask_compat import DaskContext, DaskBag, nest_bind_dask
 from sympy import (
     sympify, Symbol, Expr, SympifyError, count_ops, default_sort_key,
     AtomicExpr, Integer, S
@@ -253,7 +253,7 @@ class BCastVar:
     """Automatically broadcast variables.
 
     This class is a shallow encapsulation of a variable and its broadcast
-    into the spark context.  The variable can be redistributed automatically
+    into the dask context.  The variable can be redistributed automatically
     after any change.
 
     """
@@ -264,7 +264,7 @@ class BCastVar:
         '_bcast'
     ]
 
-    def __init__(self, ctx: SparkContext, var):
+    def __init__(self, ctx: DaskContext, var):
         """Initialize the broadcast variable."""
         self._ctx = ctx
         self._var = var
@@ -293,73 +293,14 @@ class BCastVar:
         return self._bcast
 
 
-def nest_bind(rdd: RDD, func, full_balance=True):
+def nest_bind(bag: DaskBag, func, full_balance=True):
     """Nest the flat map of the given function.
 
     When an entry no longer need processing, None can be returned by the call
     back function.
 
     """
-
-    if full_balance:
-        return _nest_bind_full_balance(rdd, func)
-    else:
-        return _nest_bind_no_balance(rdd, func)
-
-
-def _nest_bind_full_balance(rdd: RDD, func):
-    """Nest the flat map of the given function with full load balancing.
-    """
-
-    ctx = rdd.context
-
-    def wrapped(obj):
-        """Wrapped function for nest bind."""
-        vals = func(obj)
-        if vals is None:
-            return [(False, obj)]
-        else:
-            return [(True, i) for i in vals]
-
-    curr = rdd
-    curr.cache()
-    res = []
-    while curr.count() > 0:
-        step_res = curr.flatMap(wrapped)
-        step_res.cache()
-        new_entries = step_res.filter(lambda x: not x[0]).map(lambda x: x[1])
-        new_entries.cache()
-        res.append(new_entries)
-        curr = step_res.filter(lambda x: x[0]).map(lambda x: x[1])
-        curr.cache()
-        continue
-
-    return ctx.union(res)
-
-
-def _nest_bind_no_balance(rdd: RDD, func):
-    """Nest the flat map of the given function without load balancing.
-    """
-
-    def wrapped(obj):
-        """Wrapped function for nest bind."""
-        curr = [obj]
-        res = []
-        while len(curr) > 0:
-            new_curr = []
-            for i in curr:
-                step_res = func(i)
-                if step_res is None:
-                    res.append(i)
-                else:
-                    new_curr.extend(step_res)
-                continue
-            curr = new_curr
-            continue
-
-        return res
-
-    return rdd.flatMap(wrapped)
+    return nest_bind_dask(bag, func, full_balance)
 
 
 #

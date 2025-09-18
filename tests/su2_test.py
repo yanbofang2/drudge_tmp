@@ -5,10 +5,10 @@ from sympy import Rational, I, Symbol, symbols, IndexedBase
 from drudge import SU2LatticeDrudge, Range
 
 
-def test_su2_without_symbolic_index(spark_ctx):
+def test_su2_without_symbolic_index(dask_ctx):
     """Test SU2 lattice drudge without abstract symbolic lattice index."""
 
-    dr = SU2LatticeDrudge(spark_ctx)
+    dr = SU2LatticeDrudge(dask_ctx)
     p = dr.names
     half = Rational(1, 2)
     half_i = half / I
@@ -38,13 +38,13 @@ def test_su2_without_symbolic_index(spark_ctx):
         continue
 
 
-def test_su2_on_1d_heisenberg_model(spark_ctx):
+def test_su2_on_1d_heisenberg_model(dask_ctx):
     """Test the SU2 drudge on 1D Heisenberg model with abstract lattice indices.
 
     This test also acts as the test for the default resolver.
     """
 
-    dr = SU2LatticeDrudge(spark_ctx)
+    dr = SU2LatticeDrudge(dask_ctx)
     l = Range('L')
     dr.set_dumms(l, symbols('i j k l m n'))
     dr.add_default_resolver(l)
@@ -72,7 +72,7 @@ def test_su2_on_1d_heisenberg_model(spark_ctx):
     assert comm == 0
 
 
-def test_su2_with_deformed_commutation(spark_ctx):
+def test_su2_with_deformed_commutation(dask_ctx):
     """Test SU2 lattice drudge with site-dependent commutation rules."""
 
     raise_ = SU2LatticeDrudge.DEFAULT_RAISE
@@ -81,7 +81,7 @@ def test_su2_with_deformed_commutation(spark_ctx):
     alpha = IndexedBase('alpha')
     a = Symbol('a')
 
-    dr = SU2LatticeDrudge(spark_ctx, specials={
+    dr = SU2LatticeDrudge(dask_ctx, specials={
         (raise_[a], lower[a]): alpha[a] * cartan[a] - 1
     })
 

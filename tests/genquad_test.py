@@ -5,7 +5,7 @@ from sympy import Integer
 from drudge import Vec, GenQuadLatticeDrudge
 
 
-def test_assume_comm(spark_ctx):
+def test_assume_comm(dask_ctx):
     """
     Test the case where vectors are assumed to commute if there commutator
     is not specified.
@@ -14,7 +14,7 @@ def test_assume_comm(spark_ctx):
     v1 = Vec(r'v_1')
     v2 = Vec(r'v_2')
 
-    dr = GenQuadLatticeDrudge(spark_ctx, order=(v1, v2), comms={},
+    dr = GenQuadLatticeDrudge(dask_ctx, order=(v1, v2), comms={},
                               assume_comm=True)
     tensor = dr.sum(v1 | v2)
 

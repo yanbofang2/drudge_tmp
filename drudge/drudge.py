@@ -13,7 +13,7 @@ import warnings
 from collections.abc import Iterable, Sequence
 
 from IPython.display import Math, display
-from pyspark import RDD, SparkContext
+from .dask_compat import DaskBag, DaskContext
 from sympy import (
     IndexedBase, Symbol, Indexed, Wild, symbols, sympify, Expr, Add, Matrix, Mul
 )
@@ -39,7 +39,7 @@ _DECR_SUFFIX = '_InternalProxy'
 class Tensor:
     """The main tensor class.
 
-    A tensor is an aggregate of terms distributed and managed by Spark.  Here
+    A tensor is an aggregate of terms distributed and managed by Dask.  Here
     most operations needed for tensors are defined.
 
     Normally, tensor instances are created from drudge methods or tensor
@@ -60,7 +60,7 @@ class Tensor:
     # Term creation
     #
 
-    def __init__(self, drudge: 'Drudge', terms: RDD,
+    def __init__(self, drudge: 'Drudge', terms: DaskBag,
                  free_vars: typing.Set[Symbol] = None,
                  expanded=False, repartitioned=False):
         """Initialize the tensor.
@@ -101,7 +101,7 @@ class Tensor:
 
     @property
     def terms(self):
-        """The terms in the tensor, as an RDD object.
+        """The terms in the tensor, as a DaskBag object.
 
         Although for users, normally there is no need for direct manipulation of
         the terms, it is still exposed here for flexibility.
@@ -152,10 +152,10 @@ class Tensor:
         return self
 
     def repartition(self, num_partitions=None, cache=False):
-        """Repartition the terms across the Spark cluster.
+        """Repartition the terms across the Dask cluster.
 
         This function should be called when the terms need to be rebalanced
-        among the workers.  Note that this incurs an Spark RDD shuffle operation
+        among the workers.  Note that this incurs a Dask shuffle operation
         and might be very expensive.  Its invocation and the number of
         partitions used need to be fine-tuned for different problems to achieve
         good performance.
@@ -358,7 +358,7 @@ class Tensor:
     #
 
     def apply(self, func, **kwargs):
-        """Apply the given function to the RDD of terms.
+        """Apply the given function to the DaskBag of terms.
 
         This function is analogous to the replace function of Python named
         tuples, the same value from self for the tensor initializer is going to
@@ -392,7 +392,7 @@ class Tensor:
     #
     # Here for a lot of methods, we have two versions, with one being public,
     # another being private with a leading underscore.  The private version
-    # operates on given RDD of terms and returns another RDD of terms.  The
+    # operates on given DaskBag of terms and returns another DaskBag of terms.  The
     # public version operates on the terms of the current tensor, and return
     # another tensor.
     #
@@ -422,7 +422,7 @@ class Tensor:
 
         return self.apply(functools.partial(self._reset_dumms, excl=excl))
 
-    def _reset_dumms(self, terms: RDD, excl) -> RDD:
+    def _reset_dumms(self, terms: DaskBag, excl) -> DaskBag:
         """Get terms with dummies reset.
 
         Note that this function does not automatically add the free variables in
@@ -541,7 +541,7 @@ class Tensor:
         ))
 
     def _simplify_sums(
-            self, terms: RDD, simplifiers=True, excl_bases=True
+            self, terms: DaskBag, simplifiers=True, excl_bases=True
     ):
         """Simplify the summations in the given terms."""
 
@@ -605,9 +605,12 @@ class Tensor:
         return self.apply(self._sort)
 
     @staticmethod
-    def _sort(terms: RDD):
+    def _sort(terms: DaskBag):
         """Sort the terms in the tensor."""
-        return terms.sortBy(lambda term: term.sort_key)
+        # For DaskBag, we need to collect, sort, and redistribute
+        sorted_terms = sorted(terms.collect(), key=lambda term: term.sort_key)
+        import dask.bag as db
+        return DaskBag(db.from_sequence(sorted_terms, npartitions=terms.getNumPartitions()))
 
     def merge(self, consts=None, gens=None):
         """Merge some terms.
@@ -1974,18 +1977,18 @@ class Drudge:
 
     # We do not need slots here.  There is generally only one drudge instance.
 
-    def __init__(self, ctx: SparkContext, num_partitions=True):
+    def __init__(self, ctx: DaskContext, num_partitions=True):
         """Initialize the drudge.
 
         Parameters
         ----------
 
         ctx
-            The Spark context to be used.
+            The Dask context to be used.
 
         num_partitions
             The preferred number of partitions.  By default, it is the default
-            parallelism of the given Spark environment.  Or an explicit integral
+            parallelism of the given Dask environment.  Or an explicit integral
             value can be given.  It can be set to None, which disable all
             explicit load-balancing by shuffling.
 

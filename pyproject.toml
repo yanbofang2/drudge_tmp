@@ -10,9 +10,8 @@ requires-python = ">=3.12"
 dependencies = [
   "sympy>=1.14",
   "jinja2",
-  "pyspark>=3.5,<3.6",
-  "ipython>=9.0",
-  "dummyrdd @ git+https://github.com/DrudgeCAS/DummyRDD.git@master"
+  "dask[complete]>=2024.1.0",
+  "ipython>=9.0"
 ]
 classifiers = [
   'Development Status :: 4 - Beta',
