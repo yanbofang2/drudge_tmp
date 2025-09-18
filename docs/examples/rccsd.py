@@ -6,12 +6,15 @@ Scuseria et al, J Chem Phys 89 (1988) 7382 (10.1063/1.455269).
 
 """
 
-from drudge import DaskContext, RestrictedPartHoleDrudge, Stopwatch
+from pyspark import SparkConf, SparkContext
 from sympy import IndexedBase, Rational, symbols
+
+from drudge import RestrictedPartHoleDrudge, Stopwatch
 
 # Environment setting up.
 
-ctx = DaskContext()
+conf = SparkConf().setAppName('rccsd')
+ctx = SparkContext(conf=conf)
 dr = RestrictedPartHoleDrudge(ctx)
 dr.full_simplify = False
 

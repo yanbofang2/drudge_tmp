@@ -1,8 +1,9 @@
 """Configures a simple drudge for particle-hole model."""
 
-from drudge import DaskContext, PartHoleDrudge
+from dummy_spark import SparkContext
+from drudge import PartHoleDrudge
 
-ctx = DaskContext()
+ctx = SparkContext()
 dr = PartHoleDrudge(ctx)
 dr.full_simplify = False
 

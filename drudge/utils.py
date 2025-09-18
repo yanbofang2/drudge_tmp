@@ -6,7 +6,7 @@ import string
 import time
 from collections.abc import Sequence
 
-from .dask_compat import DaskContext, DaskBag, nest_bind_dask
+import dask.bag as db
 from sympy import (
     sympify, Symbol, Expr, SympifyError, count_ops, default_sort_key,
     AtomicExpr, Integer, S
@@ -253,27 +253,22 @@ class BCastVar:
     """Automatically broadcast variables.
 
     This class is a shallow encapsulation of a variable and its broadcast
-    into the dask context.  The variable can be redistributed automatically
+    into the spark context.  The variable can be redistributed automatically
     after any change.
 
     """
 
     __slots__ = [
-        '_ctx',
-        '_var',
-        '_bcast'
+        '_var'
     ]
 
-    def __init__(self, ctx: DaskContext, var):
-        """Initialize the broadcast variable."""
-        self._ctx = ctx
+    def __init__(self, var):
+        """Initialize the variable storage."""
         self._var = var
-        self._bcast = None
 
     @property
     def var(self):
         """Get the variable to mutate."""
-        self._bcast = None
         return self._var
 
     @property
@@ -287,20 +282,74 @@ class BCastVar:
 
     @property
     def bcast(self):
-        """Get the broadcast variable."""
-        if self._bcast is None:
-            self._bcast = self._ctx.broadcast(self._var)
-        return self._bcast
+        """Get the variable (no broadcasting in simplified version)."""
+        return self
 
 
-def nest_bind(bag: DaskBag, func, full_balance=True):
+def nest_bind(bag: db.Bag, func, full_balance=True):
     """Nest the flat map of the given function.
 
     When an entry no longer need processing, None can be returned by the call
     back function.
 
     """
-    return nest_bind_dask(bag, func, full_balance)
+
+    if full_balance:
+        return _nest_bind_full_balance(bag, func)
+    else:
+        return _nest_bind_no_balance(bag, func)
+
+
+def _nest_bind_full_balance(bag: db.Bag, func):
+    """Nest the flat map of the given function with full load balancing.
+    """
+
+    def wrapped(obj):
+        """Wrapped function for nest bind."""
+        vals = func(obj)
+        if vals is None:
+            return [(False, obj)]
+        else:
+            return [(True, i) for i in vals]
+
+    curr = bag
+    res = []
+    while curr.count().compute() > 0:
+        step_res = curr.map(wrapped).flatten()
+        new_entries = step_res.filter(lambda x: not x[0]).map(lambda x: x[1])
+        res.append(new_entries)
+        curr = step_res.filter(lambda x: x[0]).map(lambda x: x[1])
+
+    # Union all results
+    if res:
+        return db.concat(res)
+    else:
+        return db.from_sequence([])
+
+
+def _nest_bind_no_balance(bag: db.Bag, func):
+    """Nest the flat map of the given function without load balancing.
+    """
+
+    def wrapped(obj):
+        """Wrapped function for nest bind."""
+        curr = [obj]
+        res = []
+        while len(curr) > 0:
+            new_curr = []
+            for i in curr:
+                step_res = func(i)
+                if step_res is None:
+                    res.append(i)
+                else:
+                    new_curr.extend(step_res)
+                continue
+            curr = new_curr
+            continue
+
+        return res
+
+    return bag.map(wrapped).flatten()
 
 
 #

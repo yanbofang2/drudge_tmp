@@ -1,9 +1,10 @@
 """Configuration for particle-hole problem with explicit spin.
 """
 
-from drudge import DaskContext, RestrictedPartHoleDrudge
+from pyspark import SparkContext
+from drudge import RestrictedPartHoleDrudge
 
-ctx = DaskContext()
+ctx = SparkContext()
 dr = RestrictedPartHoleDrudge(ctx)
 dr.full_simplify = False
 

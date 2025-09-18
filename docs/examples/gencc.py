@@ -10,9 +10,10 @@ import argparse
 import collections
 import urllib.request
 
+from pyspark import SparkConf, SparkContext
 from sympy import IndexedBase, Rational, factorial
 
-from drudge import DaskContext, PartHoleDrudge, sum_, prod_, Stopwatch
+from drudge import PartHoleDrudge, sum_, prod_, Stopwatch
 
 #
 # Job preparation
@@ -26,7 +27,8 @@ parser.add_argument(
 args = parser.parse_args()
 theory = args.theory
 
-ctx = DaskContext()
+conf = SparkConf().setAppName('{}-derivation'.format(theory))
+ctx = SparkContext(conf=conf)
 
 #
 # Setting input tensors

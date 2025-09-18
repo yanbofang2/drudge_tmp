@@ -75,7 +75,7 @@ def test_basic_drs_indexed():
                 assert sympy_key(ref) == sympy_key(i)
 
 
-def test_drs_symb_call(dask_ctx):
+def test_drs_symb_call(spark_ctx):
     """Test calling methods by drs symbols."""
 
     class TestCls:
@@ -102,15 +102,15 @@ def test_drs_symb_call(dask_ctx):
     v = Vec('v')
     tensor_meth = 'local_terms'
     assert not hasattr(v, tensor_meth)  # Or the test just will not work.
-    assert DrsSymbol(Drudge(dask_ctx), tensor_meth)(v) == [
+    assert DrsSymbol(Drudge(spark_ctx), tensor_meth)(v) == [
         Term(sums=(), amp=Integer(1), vecs=(v,))
     ]
 
 
-def test_drs_tensor_def_dispatch(dask_ctx):
+def test_drs_tensor_def_dispatch(spark_ctx):
     """Tests the dispatch to drudge for tensor definitions."""
 
-    dr = Drudge(dask_ctx)
+    dr = Drudge(spark_ctx)
     names = dr.names
 
     i_symb = Symbol('i')

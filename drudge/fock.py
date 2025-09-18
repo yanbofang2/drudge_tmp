@@ -9,7 +9,7 @@ import functools
 import typing
 import warnings
 
-from .dask_compat import DaskBag
+import dask.bag as db
 from sympy import (
     KroneckerDelta, IndexedBase, Expr, Symbol, Rational, symbols, conjugate,
     factorial
@@ -185,7 +185,7 @@ class FockDrudge(WickDrudge):
             self, self.normal_order(tensor.terms, comparator=None)
         )
 
-    def normal_order(self, terms: DaskBag, **kwargs):
+    def normal_order(self, terms: db.Bag, **kwargs):
         """Normal order the field operators.
 
         Here the normal-ordering operation of general Wick drudge will be
